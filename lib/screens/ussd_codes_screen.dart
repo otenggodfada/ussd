@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
+import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/ussd_model.dart';
+import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/widgets/ussd_section_card.dart';
 import 'package:ussd_plus/widgets/ussd_code_card.dart';
 
@@ -55,6 +57,16 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
     setState(() {
       _searchResults = results;
     });
+    
+    // Log search activity
+    if (results.isNotEmpty) {
+      await ActivityService.logActivity(
+        type: ActivityType.searchPerformed,
+        title: 'Searched USSD codes',
+        description: 'Found ${results.length} codes for "$query"',
+        metadata: {'query': query, 'resultCount': results.length},
+      );
+    }
   }
 
   @override
@@ -178,6 +190,14 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   }
 
   void _showSearchCodeDetails(USSDCode code) {
+    // Log activity
+    ActivityService.logActivity(
+      type: ActivityType.ussdCodeViewed,
+      title: 'Viewed ${code.name}',
+      description: '${code.provider} - ${code.code}',
+      metadata: {'code': code.code, 'provider': code.provider},
+    );
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -204,6 +224,12 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Dialing ${code.code}...')),
               );
+              // Log copy/dial activity
+              ActivityService.logActivity(
+                type: ActivityType.ussdCodeCopied,
+                title: 'Dialed ${code.name}',
+                description: code.code,
+              );
             },
             child: const Text('Dial'),
           ),
@@ -213,6 +239,14 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   }
 
   void _toggleSearchFavorite(USSDCode code) {
+    // Log favorite activity
+    ActivityService.logActivity(
+      type: ActivityType.ussdCodeFavorited,
+      title: code.isFavorite ? 'Removed from favorites' : 'Added to favorites',
+      description: '${code.name} - ${code.provider}',
+      metadata: {'code': code.code, 'provider': code.provider},
+    );
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${code.name} ${code.isFavorite ? 'removed from' : 'added to'} favorites'),
@@ -221,6 +255,14 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   }
 
   void _showSectionDetails(USSDSection section) {
+    // Log category view activity
+    ActivityService.logActivity(
+      type: ActivityType.categoryViewed,
+      title: 'Viewed ${section.name}',
+      description: '${section.codes.length} USSD codes',
+      metadata: {'category': section.name, 'codeCount': section.codes.length},
+    );
+    
     // Group codes by provider
     final Map<String, List<USSDCode>> codesByProvider = {};
     for (final code in section.codes) {
@@ -353,6 +395,14 @@ class _SectionDetailsScreen extends StatelessWidget {
   }
 
   void _showCodeDetails(BuildContext context, USSDCode code) {
+    // Log activity
+    ActivityService.logActivity(
+      type: ActivityType.ussdCodeViewed,
+      title: 'Viewed ${code.name}',
+      description: '${code.provider} - ${code.code}',
+      metadata: {'code': code.code, 'provider': code.provider},
+    );
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -379,6 +429,12 @@ class _SectionDetailsScreen extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Dialing ${code.code}...')),
               );
+              // Log copy/dial activity
+              ActivityService.logActivity(
+                type: ActivityType.ussdCodeCopied,
+                title: 'Dialed ${code.name}',
+                description: code.code,
+              );
             },
             child: const Text('Dial'),
           ),
@@ -388,6 +444,14 @@ class _SectionDetailsScreen extends StatelessWidget {
   }
 
   void _toggleFavorite(BuildContext context, USSDCode code) {
+    // Log favorite activity
+    ActivityService.logActivity(
+      type: ActivityType.ussdCodeFavorited,
+      title: code.isFavorite ? 'Removed from favorites' : 'Added to favorites',
+      description: '${code.name} - ${code.provider}',
+      metadata: {'code': code.code, 'provider': code.provider},
+    );
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${code.name} ${code.isFavorite ? 'removed from' : 'added to'} favorites'),

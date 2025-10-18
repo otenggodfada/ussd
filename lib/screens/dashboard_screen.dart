@@ -4,9 +4,14 @@ import 'package:ussd_plus/widgets/stats_card.dart';
 import 'package:ussd_plus/widgets/recent_activity_card.dart';
 import 'package:ussd_plus/widgets/quick_actions_card.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);

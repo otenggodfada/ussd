@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:ussd_plus/screens/privacy_policy_screen.dart';
 import 'package:ussd_plus/screens/about_screen.dart';
+import 'package:ussd_plus/utils/activity_service.dart';
+import 'package:ussd_plus/models/activity_model.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -158,6 +160,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showThemeOptions(BuildContext context) {
+    // Log settings activity
+    ActivityService.logActivity(
+      type: ActivityType.settingsChanged,
+      title: 'Opened theme settings',
+      description: 'Viewing theme customization options',
+    );
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -174,6 +183,13 @@ class SettingsScreen extends StatelessWidget {
   }
 
   void _showNotificationSettings(BuildContext context) {
+    // Log settings activity
+    ActivityService.logActivity(
+      type: ActivityType.settingsChanged,
+      title: 'Opened notification settings',
+      description: 'Viewing notification preferences',
+    );
+    
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -219,6 +235,12 @@ class SettingsScreen extends StatelessWidget {
           TextButton(
             onPressed: () {
               Navigator.pop(context);
+              // Log data clearing activity
+              ActivityService.logActivity(
+                type: ActivityType.settingsChanged,
+                title: 'Cleared app data',
+                description: 'Cleared all cached data',
+              );
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Data cleared successfully')),
               );

@@ -1,7 +1,32 @@
 import 'package:flutter/material.dart';
+import '../models/activity_model.dart';
+import '../utils/activity_service.dart';
 
-class RecentActivityCard extends StatelessWidget {
+class RecentActivityCard extends StatefulWidget {
   const RecentActivityCard({super.key});
+
+  @override
+  State<RecentActivityCard> createState() => _RecentActivityCardState();
+}
+
+class _RecentActivityCardState extends State<RecentActivityCard> {
+  List<Activity> _activities = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadActivities();
+  }
+
+  Future<void> _loadActivities() async {
+    setState(() => _isLoading = true);
+    final activities = await ActivityService.getActivities(limit: 5);
+    setState(() {
+      _activities = activities;
+      _isLoading = false;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,34 +73,57 @@ class RecentActivityCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20.0),
-          _buildActivityItem(
-            context,
-            'Checked MTN balance',
-            '2 hours ago',
-            Icons.phone,
-            Colors.blue,
-          ),
-          _buildActivityItem(
-            context,
-            'Analyzed 5 SMS messages',
-            '4 hours ago',
-            Icons.sms,
-            Colors.green,
-          ),
-          _buildActivityItem(
-            context,
-            'Added USSD code to favorites',
-            '1 day ago',
-            Icons.favorite,
-            Colors.red,
-          ),
-          _buildActivityItem(
-            context,
-            'Viewed cost summary',
-            '2 days ago',
-            Icons.attach_money,
-            Colors.orange,
-          ),
+          if (_isLoading)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20.0),
+                child: CircularProgressIndicator(),
+              ),
+            )
+          else if (_activities.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Center(
+                child: Column(
+                  children: [
+                    Icon(
+                      Icons.inbox_outlined,
+                      size: 48,
+                      color: theme.colorScheme.onSurface.withOpacity(0.3),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'No activities yet',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Start exploring to see your activity here',
+                      style: TextStyle(
+                        color: theme.colorScheme.onSurface.withOpacity(0.4),
+                        fontSize: 12,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else
+            ..._activities.map((activity) {
+              final display = activity.display;
+              return _buildActivityItem(
+                context,
+                activity.title,
+                activity.timeAgo,
+                display.icon,
+                display.color,
+                description: activity.description,
+              );
+            }).toList(),
         ],
       ),
     );
@@ -86,8 +134,9 @@ class RecentActivityCard extends StatelessWidget {
     String title,
     String time,
     IconData icon,
-    Color color,
-  ) {
+    Color color, {
+    String? description,
+  }) {
     final theme = Theme.of(context);
     
     return Container(
@@ -141,6 +190,18 @@ class RecentActivityCard extends StatelessWidget {
                     fontSize: 14,
                   ),
                 ),
+                if (description != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    description,
+                    style: TextStyle(
+                      color: theme.colorScheme.onSurface.withOpacity(0.6),
+                      fontSize: 12,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
                 const SizedBox(height: 2),
                 Row(
                   children: [

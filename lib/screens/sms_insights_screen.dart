@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:ussd_plus/models/sms_model.dart';
+import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/utils/sms_analyzer.dart';
+import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/widgets/sms_category_card.dart';
 import 'package:ussd_plus/widgets/cost_summary_card.dart';
 import 'package:ussd_plus/widgets/sms_message_card.dart';
@@ -46,6 +48,16 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
         _costSummary = _calculateCostSummary(_messages);
         _isLoading = false;
       });
+      
+      // Log SMS analysis activity
+      if (messages.isNotEmpty) {
+        await ActivityService.logActivity(
+          type: ActivityType.smsAnalyzed,
+          title: 'Analyzed ${messages.length} SMS messages',
+          description: 'Total cost: GHS ${_costSummary?.totalCost.toStringAsFixed(2) ?? '0.00'}',
+          metadata: {'messageCount': messages.length, 'totalCost': _costSummary?.totalCost},
+        );
+      }
     } catch (e) {
       setState(() {
         _messages = _generateSampleMessages();
@@ -303,7 +315,23 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                 children: [
                   // Cost Summary
                   if (_costSummary != null)
-                    CostSummaryCard(costSummary: _costSummary!),
+                    GestureDetector(
+                      onTap: () {
+                        // Log cost summary view
+                        ActivityService.logActivity(
+                          type: ActivityType.costSummaryViewed,
+                          title: 'Viewed cost summary',
+                          description: 'Total: GHS ${_costSummary!.totalCost.toStringAsFixed(2)}',
+                          metadata: {
+                            'totalCost': _costSummary!.totalCost,
+                            'totalMessages': _costSummary!.totalMessages,
+                            'totalExpenses': _costSummary!.totalExpenses,
+                            'totalRevenue': _costSummary!.totalRevenue,
+                          },
+                        );
+                      },
+                      child: CostSummaryCard(costSummary: _costSummary!),
+                    ),
                   
                   const SizedBox(height: 32.0),
                   
@@ -425,6 +453,14 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     final categoryMessages = _messages
         .where((msg) => msg.category == category)
         .toList();
+    
+    // Log category view activity
+    ActivityService.logActivity(
+      type: ActivityType.categoryViewed,
+      title: 'Viewed ${category.displayName} SMS',
+      description: '${categoryMessages.length} messages in category',
+      metadata: {'category': category.name, 'messageCount': categoryMessages.length},
+    );
     
     showModalBottomSheet(
       context: context,
