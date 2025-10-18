@@ -24,12 +24,20 @@ class USSDDataService {
         
         for (final item in jsonData) {
           final category = (item['category'] ?? 'Other').toString();
+          // Use 'network' field for cleaner provider names (MTN, Vodafone), fallback to 'provider'
+          final providerName = (item['network'] ?? item['provider'] ?? 'Unknown').toString()
+              .replaceAll(' Ghana', '')
+              .replaceAll('Ghana', '')
+              .trim();
+          // Use 'name' field directly - it already has proper names like "MTN Mobile Money"
+          final codeName = item['name']?.toString() ?? 'Unknown';
+          
           final code = USSDCode(
             id: item['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
             code: item['code'] ?? '',
-            name: item['name'] ?? 'Unknown',
+            name: codeName,
             description: item['description'] ?? '',
-            provider: item['name'] ?? 'Unknown',
+            provider: providerName,
             category: _mapCategoryName(category),
             lastUsed: DateTime.now(),
           );
@@ -68,10 +76,15 @@ class USSDDataService {
             
             if (codeValue.isEmpty) continue;
             
+            // Create code name with provider prefix
+            final prefixedName = name.toLowerCase().startsWith(provider.toLowerCase())
+                ? name
+                : '$provider $name';
+            
             final code = USSDCode(
               id: 'excel_${DateTime.now().millisecondsSinceEpoch}_${categorizedCodes.length}',
               code: codeValue,
-              name: name,
+              name: prefixedName,
               description: description,
               provider: provider,
               category: _mapCategoryName(category),
@@ -196,7 +209,7 @@ class USSDDataService {
           USSDCode(
             id: 'mtn_balance',
             code: '*124#',
-            name: 'Check Balance',
+            name: 'MTN Check Balance',
             description: 'Check MTN airtime balance',
             provider: 'MTN',
             category: 'telecom',
@@ -205,8 +218,17 @@ class USSDDataService {
           USSDCode(
             id: 'mtn_data',
             code: '*138#',
-            name: 'Data Bundle',
+            name: 'MTN Data Bundle',
             description: 'Subscribe to MTN data bundles',
+            provider: 'MTN',
+            category: 'telecom',
+            lastUsed: DateTime.now(),
+          ),
+          USSDCode(
+            id: 'mtn_borrow',
+            code: '*506#',
+            name: 'MTN Borrow Airtime',
+            description: 'Borrow airtime on credit',
             provider: 'MTN',
             category: 'telecom',
             lastUsed: DateTime.now(),
@@ -214,7 +236,7 @@ class USSDDataService {
           USSDCode(
             id: 'vodafone_balance',
             code: '*110#',
-            name: 'Check Balance',
+            name: 'Vodafone Check Balance',
             description: 'Check Vodafone airtime balance',
             provider: 'Vodafone',
             category: 'telecom',
@@ -223,27 +245,9 @@ class USSDDataService {
           USSDCode(
             id: 'vodafone_data',
             code: '*110*2#',
-            name: 'Data Bundle',
+            name: 'Vodafone Data Bundle',
             description: 'Subscribe to Vodafone data bundles',
             provider: 'Vodafone',
-            category: 'telecom',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'airtel_balance',
-            code: '*123#',
-            name: 'Check Balance',
-            description: 'Check Airtel airtime balance',
-            provider: 'Airtel',
-            category: 'telecom',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'glo_balance',
-            code: '*124*4#',
-            name: 'Check Balance',
-            description: 'Check Glo airtime balance',
-            provider: 'Globacom',
             category: 'telecom',
             lastUsed: DateTime.now(),
           ),
@@ -259,8 +263,17 @@ class USSDDataService {
           USSDCode(
             id: 'gcb_balance',
             code: '*422*0#',
-            name: 'Check Balance',
+            name: 'GCB Check Balance',
             description: 'Check GCB Bank account balance',
+            provider: 'GCB Bank',
+            category: 'banking',
+            lastUsed: DateTime.now(),
+          ),
+          USSDCode(
+            id: 'gcb_transfer',
+            code: '*422*1#',
+            name: 'GCB Transfer',
+            description: 'Transfer money from GCB account',
             provider: 'GCB Bank',
             category: 'banking',
             lastUsed: DateTime.now(),
@@ -268,64 +281,10 @@ class USSDDataService {
           USSDCode(
             id: 'absa_balance',
             code: '*920*0#',
-            name: 'Check Balance',
+            name: 'Absa Check Balance',
             description: 'Check Absa Bank account balance',
             provider: 'Absa Bank',
             category: 'banking',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'fidelity_balance',
-            code: '*770*0#',
-            name: 'Check Balance',
-            description: 'Check Fidelity Bank account balance',
-            provider: 'Fidelity Bank',
-            category: 'banking',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'zenith_balance',
-            code: '*966*0#',
-            name: 'Check Balance',
-            description: 'Check Zenith Bank account balance',
-            provider: 'Zenith Bank',
-            category: 'banking',
-            lastUsed: DateTime.now(),
-          ),
-        ],
-      ),
-      USSDSection(
-        id: 'utilities',
-        name: 'Utilities',
-        description: 'Electricity, water, and other utility services',
-        icon: '⚡',
-        color: '#28A745',
-        codes: [
-          USSDCode(
-            id: 'ecg_pay',
-            code: '*713*33#',
-            name: 'Pay Electricity Bill',
-            description: 'Pay ECG electricity bill',
-            provider: 'ECG',
-            category: 'utilities',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'gwc_pay',
-            code: '*713*33#',
-            name: 'Pay Water Bill',
-            description: 'Pay GWC water bill',
-            provider: 'GWC',
-            category: 'utilities',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'grdc_pay',
-            code: '*713*33#',
-            name: 'Pay Gas Bill',
-            description: 'Pay GRDC gas bill',
-            provider: 'GRDC',
-            category: 'utilities',
             lastUsed: DateTime.now(),
           ),
         ],
@@ -352,15 +311,6 @@ class USSDDataService {
             name: 'Vodafone Cash',
             description: 'Access Vodafone Cash services',
             provider: 'Vodafone',
-            category: 'mobile_money',
-            lastUsed: DateTime.now(),
-          ),
-          USSDCode(
-            id: 'airtel_money',
-            code: '*126#',
-            name: 'Airtel Money',
-            description: 'Access Airtel Money services',
-            provider: 'Airtel',
             category: 'mobile_money',
             lastUsed: DateTime.now(),
           ),

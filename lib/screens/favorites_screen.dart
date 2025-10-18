@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/ussd_model.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/widgets/ussd_code_card.dart';
-
 class FavoritesScreen extends StatefulWidget {
   const FavoritesScreen({super.key});
 
@@ -266,18 +266,52 @@ class _FavoritesScreenState extends State<FavoritesScreen> with AutomaticKeepAli
             child: const Text('Close'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Dialing ${code.code}...')),
-              );
-              ActivityService.logActivity(
-                type: ActivityType.ussdCodeCopied,
-                title: 'Dialed ${code.name}',
-                description: code.code,
-              );
+              
+              // Make the direct call
+              try {
+                bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
+                
+                // Log copy/dial activity
+                await ActivityService.logActivity(
+                  type: ActivityType.ussdCodeCopied,
+                  title: 'Dialed ${code.name}',
+                  description: code.code,
+                );
+                
+                if (!context.mounted) return;
+                
+                if (result == true) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Dialing ${code.code}...'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to dial ${code.code}'),
+                      duration: const Duration(seconds: 2),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (!context.mounted) return;
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Error: Unable to make call'),
+                    duration: Duration(seconds: 2),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
             },
-            child: const Text('Dial'),
+            child: const Text('Dial Code'),
           ),
         ],
       ),

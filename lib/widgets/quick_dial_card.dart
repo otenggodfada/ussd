@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 import 'package:ussd_plus/models/ussd_model.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/theme/theme_generator.dart';
-
 class QuickDialCard extends StatefulWidget {
   const QuickDialCard({super.key});
 
@@ -86,21 +86,49 @@ class _QuickDialCardState extends State<QuickDialCard> {
     _autoScrolling = false;
   }
 
-  void _dialCode(USSDCode code) {
-    // Log activity
-    ActivityService.logActivity(
-      type: ActivityType.ussdCodeCopied,
-      title: 'Quick dialed ${code.name}',
-      description: code.code,
-      metadata: {'code': code.code, 'provider': code.provider},
-    );
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Dialing ${code.code}...'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+  Future<void> _dialCode(USSDCode code) async {
+    try {
+      // Make the direct call
+      bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
+      
+      // Log activity
+      await ActivityService.logActivity(
+        type: ActivityType.ussdCodeCopied,
+        title: 'Quick dialed ${code.name}',
+        description: code.code,
+        metadata: {'code': code.code, 'provider': code.provider},
+      );
+      
+      if (!mounted) return;
+      
+      if (result == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dialing ${code.code}...'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to dial ${code.code}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: Unable to make call'),
+          duration: const Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override

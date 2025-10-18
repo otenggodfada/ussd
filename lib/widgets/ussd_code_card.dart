@@ -17,45 +17,51 @@ class USSDCodeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gradient = ThemeGenerator.generateGradient(ThemeGenerator.themeNumber);
     
-    return Container(
-      margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(
-          color: theme.colorScheme.primary.withOpacity(0.15),
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              theme.colorScheme.surface,
+              theme.colorScheme.surface.withOpacity(0.8),
+            ],
           ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(16.0),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.primary.withOpacity(0.2),
+            width: 1,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header row with code badge and favorite button
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                // USSD Code Display
+                // Code badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    gradient: gradient,
-                    borderRadius: BorderRadius.circular(12.0),
+                    gradient: ThemeGenerator.generateGradient(ThemeGenerator.themeNumber),
+                    borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
                         color: theme.colorScheme.primary.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 4),
+                        blurRadius: 6,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
@@ -64,68 +70,79 @@ class USSDCodeCard extends StatelessWidget {
                     style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                      letterSpacing: 1.2,
+                      fontSize: 14,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ),
-                const SizedBox(width: 16.0),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        code.name,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 15,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4.0),
-                      if (code.description.isNotEmpty)
-                        Text(
-                          code.description,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: theme.colorScheme.onSurface.withOpacity(0.6),
-                            height: 1.3,
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
+                
                 // Favorite Button
-                Container(
-                  decoration: BoxDecoration(
-                    color: code.isFavorite 
-                        ? Colors.red.withOpacity(0.15)
-                        : theme.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
+                GestureDetector(
+                  onTap: onFavorite,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
                       color: code.isFavorite 
-                          ? Colors.red.withOpacity(0.3)
-                          : theme.colorScheme.onSurface.withOpacity(0.2),
-                      width: 1,
+                          ? Colors.red.withOpacity(0.15)
+                          : theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: code.isFavorite 
+                            ? Colors.red.withOpacity(0.3)
+                            : theme.colorScheme.onSurface.withOpacity(0.2),
+                        width: 1,
+                      ),
                     ),
-                  ),
-                  child: IconButton(
-                    onPressed: onFavorite,
-                    icon: Icon(
+                    child: Icon(
                       code.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
                       color: code.isFavorite ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.5),
-                      size: 22,
+                      size: 18,
                     ),
-                    padding: const EdgeInsets.all(8),
-                    constraints: const BoxConstraints(),
                   ),
                 ),
               ],
             ),
-          ),
+            
+            const SizedBox(height: 12),
+            
+            // Name and provider
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  code.name,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.business_rounded,
+                      size: 12,
+                      color: theme.colorScheme.onSurface.withOpacity(0.5),
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        code.provider,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
