@@ -1,0 +1,233 @@
+[
+  {
+    "name": "Standard Bank",
+    "code": "*130*99#",
+    "category": "Banking",
+    "description": "Standard Bank instant money and banking",
+    "provider": "Standard Bank",
+    "network": "All Networks",
+    "id": "za_0001",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "FNB Banking",
+    "code": "*120*321#",
+    "category": "Banking",
+    "description": "FNB mobile banking services",
+    "provider": "FNB",
+    "network": "All Networks",
+    "id": "za_0002",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "ABSA Bank",
+    "code": "*120*2272#",
+    "category": "Banking",
+    "description": "ABSA mobile banking",
+    "provider": "ABSA Bank",
+    "network": "All Networks",
+    "id": "za_0003",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Nedbank",
+    "code": "*120*2633#",
+    "category": "Banking",
+    "description": "Nedbank mobile banking",
+    "provider": "Nedbank",
+    "network": "All Networks",
+    "id": "za_0004",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Capitec Bank",
+    "code": "*120*3279#",
+    "category": "Banking",
+    "description": "Capitec Bank remote banking",
+    "provider": "Capitec Bank",
+    "network": "All Networks",
+    "id": "za_0005",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Investec Bank",
+    "code": "*120*7463#",
+    "category": "Banking",
+    "description": "Investec mobile banking",
+    "provider": "Investec",
+    "network": "All Networks",
+    "id": "za_0006",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "African Bank",
+    "code": "*120*2432#",
+    "category": "Banking",
+    "description": "African Bank mobile services",
+    "provider": "African Bank",
+    "network": "All Networks",
+    "id": "za_0007",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "TymeBank",
+    "code": "*134*1234#",
+    "category": "Banking",
+    "description": "TymeBank digital banking",
+    "provider": "TymeBank",
+    "network": "All Networks",
+    "id": "za_0008",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Discovery Bank",
+    "code": "*134*3472#",
+    "category": "Banking",
+    "description": "Discovery Bank mobile banking",
+    "provider": "Discovery Bank",
+    "network": "All Networks",
+    "id": "za_0009",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Bidvest Bank",
+    "code": "*120*8434#",
+    "category": "Banking",
+    "description": "Bidvest Bank mobile services",
+    "provider": "Bidvest Bank",
+    "network": "All Networks",
+    "id": "za_0010",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Vodacom Balance Check",
+    "code": "*135#",
+    "category": "Telecom",
+    "description": "Check Vodacom balance",
+    "provider": "Vodacom",
+    "network": "Vodacom",
+    "id": "za_0011",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Vodacom My Number",
+    "code": "*135*501#",
+    "category": "Telecom",
+    "description": "Check your Vodacom number",
+    "provider": "Vodacom",
+    "network": "Vodacom",
+    "id": "za_0012",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Vodacom Transfer Airtime",
+    "code": "*135*47#",
+    "category": "Telecom",
+    "description": "Transfer airtime to others",
+    "provider": "Vodacom",
+    "network": "Vodacom",
+    "id": "za_0013",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN Balance Check",
+    "code": "*136#",
+    "category": "Telecom",
+    "description": "Check MTN balance",
+    "provider": "MTN South Africa",
+    "network": "MTN",
+    "id": "za_0014",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN My Number",
+    "code": "*136*8#",
+    "category": "Telecom",
+    "description": "Check your MTN number",
+    "provider": "MTN South Africa",
+    "network": "MTN",
+    "id": "za_0015",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Cell C Balance Check",
+    "code": "*147#",
+    "category": "Telecom",
+    "description": "Check Cell C balance",
+    "provider": "Cell C",
+    "network": "Cell C",
+    "id": "za_0016",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Cell C My Number",
+    "code": "*147*789#",
+    "category": "Telecom",
+    "description": "Check your Cell C number",
+    "provider": "Cell C",
+    "network": "Cell C",
+    "id": "za_0017",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Telkom Balance Check",
+    "code": "*180#",
+    "category": "Telecom",
+    "description": "Check Telkom Mobile balance",
+    "provider": "Telkom Mobile",
+    "network": "Telkom",
+    "id": "za_0018",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Eskom Prepaid",
+    "code": "*120*321#",
+    "category": "Utilities",
+    "description": "Buy Eskom prepaid electricity",
+    "provider": "Eskom",
+    "network": "All Networks",
+    "id": "za_0019",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "DSTV South Africa",
+    "code": "*120*345#",
+    "category": "Utilities",
+    "description": "Pay DSTV subscription",
+    "provider": "DSTV",
+    "network": "All Networks",
+    "id": "za_0020",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "ShowMax",
+    "code": "*134*789#",
+    "category": "Utilities",
+    "description": "ShowMax subscription services",
+    "provider": "ShowMax",
+    "network": "All Networks",
+    "id": "za_0021",
+    "country": "South Africa",
+    "last_updated": "2025-10-18T00:00:00Z"
+  }
+]

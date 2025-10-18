@@ -49,5 +49,9 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>USSD+ needs your location to automatically detect your country and show relevant USSD codes.</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>USSD+ needs your location to automatically detect your country and show relevant USSD codes.</string>
 </dict>
 </plist>

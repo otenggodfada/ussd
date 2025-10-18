@@ -3,9 +3,91 @@ import 'package:ussd_plus/screens/privacy_policy_screen.dart';
 import 'package:ussd_plus/screens/about_screen.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/activity_model.dart';
+import 'package:ussd_plus/utils/ussd_data_service.dart';
+import 'package:ussd_plus/utils/location_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  String _selectedCountry = 'Ghana';
+  String? _detectedCountry;
+  bool _autoDetectEnabled = true;
+  bool _isDetecting = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+  
+  Future<void> _loadSettings() async {
+    final country = await USSDDataService.getSelectedCountry();
+    final autoDetect = await LocationService.isAutoDetectEnabled();
+    final detected = await LocationService.getDetectedCountry();
+    
+    setState(() {
+      _selectedCountry = country;
+      _autoDetectEnabled = autoDetect;
+      _detectedCountry = detected;
+    });
+  }
+  
+  Future<void> _detectCountryNow() async {
+    setState(() {
+      _isDetecting = true;
+    });
+    
+    try {
+      final detectedCountry = await LocationService.detectCountryFromLocation();
+      
+      if (detectedCountry != null) {
+        setState(() {
+          _detectedCountry = detectedCountry;
+          _selectedCountry = detectedCountry;
+          _isDetecting = false;
+        });
+        
+        // Clear manual selection to allow auto-detection
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove('selected_country');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Country detected: $detectedCountry'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      } else {
+        setState(() {
+          _isDetecting = false;
+        });
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not detect country. Please select manually.'),
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _isDetecting = false;
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $e'),
+          duration: const Duration(seconds: 3),
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,6 +105,64 @@ class SettingsScreen extends StatelessWidget {
         children: [
           // App Settings
           _buildSectionHeader('App Settings'),
+          
+          // Auto-detect country toggle
+          Card(
+            margin: const EdgeInsets.only(bottom: 8.0),
+            color: theme.colorScheme.surface,
+            child: SwitchListTile(
+              secondary: Icon(Icons.location_on, color: theme.colorScheme.primary),
+              title: Text(
+                'Auto-detect Country',
+                style: TextStyle(color: theme.colorScheme.onSurface),
+              ),
+              subtitle: Text(
+                _autoDetectEnabled 
+                    ? (_detectedCountry != null 
+                        ? 'Detected: $_detectedCountry' 
+                        : 'Using GPS to detect country')
+                    : 'Manual selection only',
+                style: TextStyle(
+                  color: theme.colorScheme.onSurface.withOpacity(0.6),
+                ),
+              ),
+              value: _autoDetectEnabled,
+              onChanged: (bool value) async {
+                await LocationService.setAutoDetect(value);
+                setState(() {
+                  _autoDetectEnabled = value;
+                });
+                
+                if (value) {
+                  // Try to detect country immediately
+                  _detectCountryNow();
+                }
+                
+                ActivityService.logActivity(
+                  type: ActivityType.settingsChanged,
+                  title: 'Auto-detect country ${value ? "enabled" : "disabled"}',
+                  description: 'Changed auto-detection setting',
+                );
+              },
+            ),
+          ),
+          
+          // Detect now button
+          if (_autoDetectEnabled)
+            _buildSettingsTile(
+              icon: _isDetecting ? Icons.hourglass_empty : Icons.my_location,
+              title: _isDetecting ? 'Detecting...' : 'Detect Country Now',
+              subtitle: 'Use GPS to find your current location',
+              onTap: _isDetecting ? null : () => _detectCountryNow(),
+            ),
+          
+          // Manual country selector
+          _buildSettingsTile(
+            icon: Icons.public,
+            title: 'Country/Region',
+            subtitle: _selectedCountry,
+            onTap: () => _showCountrySelector(context),
+          ),
           _buildSettingsTile(
             icon: Icons.palette,
             title: 'Theme',
@@ -127,7 +267,7 @@ class SettingsScreen extends StatelessWidget {
     required IconData icon,
     required String title,
     required String subtitle,
-    required VoidCallback onTap,
+    VoidCallback? onTap,
     Color? textColor,
   }) {
     return Builder(
@@ -137,25 +277,89 @@ class SettingsScreen extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 8.0),
           color: theme.colorScheme.surface,
           child: ListTile(
-            leading: Icon(icon, color: textColor ?? theme.colorScheme.primary),
+            leading: Icon(
+              icon, 
+              color: onTap == null 
+                  ? theme.colorScheme.onSurface.withOpacity(0.5)
+                  : (textColor ?? theme.colorScheme.primary)
+            ),
             title: Text(
               title,
-              style: TextStyle(color: textColor ?? theme.colorScheme.onSurface),
+              style: TextStyle(
+                color: onTap == null
+                    ? theme.colorScheme.onSurface.withOpacity(0.5)
+                    : (textColor ?? theme.colorScheme.onSurface)
+              ),
             ),
             subtitle: Text(
               subtitle,
               style: TextStyle(
-                color: textColor?.withOpacity(0.7) ?? theme.colorScheme.onSurface.withOpacity(0.6),
+                color: onTap == null
+                    ? theme.colorScheme.onSurface.withOpacity(0.3)
+                    : (textColor?.withOpacity(0.7) ?? theme.colorScheme.onSurface.withOpacity(0.6)),
               ),
             ),
-            trailing: Icon(
+            trailing: onTap != null ? Icon(
               Icons.chevron_right,
               color: textColor?.withOpacity(0.5) ?? theme.colorScheme.onSurface.withOpacity(0.5),
-            ),
+            ) : null,
             onTap: onTap,
+            enabled: onTap != null,
           ),
         );
       },
+    );
+  }
+
+  Future<void> _showCountrySelector(BuildContext context) async {
+    final countries = await USSDDataService.getAvailableCountries();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Select Country/Region'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: countries.map((country) {
+            return RadioListTile<String>(
+              title: Text(country),
+              value: country,
+              groupValue: _selectedCountry,
+              onChanged: (value) async {
+                if (value != null) {
+                  await USSDDataService.setSelectedCountry(value);
+                  setState(() {
+                    _selectedCountry = value;
+                  });
+                  
+                  // Log settings activity
+                  ActivityService.logActivity(
+                    type: ActivityType.settingsChanged,
+                    title: 'Changed country',
+                    description: 'Changed country to $value',
+                  );
+                  
+                  Navigator.pop(context);
+                  
+                  // Show restart message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Country changed to $value. Please restart the app or navigate to refresh data.'),
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                }
+              },
+            );
+          }).toList(),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
     );
   }
 

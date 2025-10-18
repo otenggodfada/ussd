@@ -36,7 +36,6 @@ A powerful Flutter app that combines offline USSD code management with AI-powere
 - **Permission Handler** for runtime permissions
 - **Flutter Local Notifications** for notifications
 - **AdMob** integration (placeholder)
-- **RevenueCat** integration (placeholder)
 
 ## 📦 Installation
 

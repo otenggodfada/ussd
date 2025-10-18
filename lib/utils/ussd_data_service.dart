@@ -3,13 +3,56 @@ import 'package:flutter/services.dart';
 import 'package:excel/excel.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ussd_model.dart';
+import 'location_service.dart';
 
 class USSDDataService {
   static List<USSDSection>? _cachedSections;
+  static String? _cachedCountry;
   static const String _favoritesKey = 'favorite_ussd_codes';
+  static const String _countryKey = 'selected_country';
+  
+  // Get selected country from storage with auto-detection
+  static Future<String> getSelectedCountry() async {
+    final prefs = await SharedPreferences.getInstance();
+    final manualCountry = prefs.getString(_countryKey);
+    
+    // If user manually selected a country, use that
+    if (manualCountry != null) {
+      return manualCountry;
+    }
+    
+    // Otherwise, try auto-detection
+    final autoDetectedCountry = await LocationService.getCountryWithAutoDetect('Ghana');
+    return autoDetectedCountry;
+  }
+  
+  // Set selected country
+  static Future<void> setSelectedCountry(String country) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_countryKey, country);
+    clearCache(); // Clear cache to force reload with new country
+  }
+  
+  // Get available countries
+  static Future<List<String>> getAvailableCountries() async {
+    return [
+      'Ghana',
+      'Nigeria',
+      'Kenya',
+      'Tanzania',
+      'Uganda',
+      'South Africa',
+      'Rwanda',
+      'India',
+      'USA'
+    ]; // Sorted by region, then alphabetically
+  }
   
   static Future<List<USSDSection>> getOfflineUSSDData() async {
-    if (_cachedSections != null) {
+    final selectedCountry = await getSelectedCountry();
+    
+    // Return cached data if available and country hasn't changed
+    if (_cachedSections != null && _cachedCountry == selectedCountry) {
       return _cachedSections!;
     }
     
@@ -17,9 +60,42 @@ class USSDDataService {
       // Group USSD codes by category
       final Map<String, List<USSDCode>> categorizedCodes = {};
       
-      // Load JSON data from assets (comprehensive Ghana USSD codes)
+      // Determine which JSON file to load based on selected country
+      String jsonFileName;
+      switch (selectedCountry) {
+        case 'USA':
+          jsonFileName = 'assets/dataset/ussd_codes_usa.json';
+          break;
+        case 'Nigeria':
+          jsonFileName = 'assets/dataset/ussd_codes_nigeria.json';
+          break;
+        case 'Kenya':
+          jsonFileName = 'assets/dataset/ussd_codes_kenya.json';
+          break;
+        case 'Tanzania':
+          jsonFileName = 'assets/dataset/ussd_codes_tanzania.json';
+          break;
+        case 'Uganda':
+          jsonFileName = 'assets/dataset/ussd_codes_uganda.json';
+          break;
+        case 'South Africa':
+          jsonFileName = 'assets/dataset/ussd_codes_south_africa.json';
+          break;
+        case 'Rwanda':
+          jsonFileName = 'assets/dataset/ussd_codes_rwanda.json';
+          break;
+        case 'India':
+          jsonFileName = 'assets/dataset/ussd_codes_india.json';
+          break;
+        case 'Ghana':
+        default:
+          jsonFileName = 'assets/dataset/ussd_codes_ghana.json';
+          break;
+      }
+      
+      // Load JSON data from assets
       try {
-        final String jsonString = await rootBundle.loadString('assets/dataset/ussd_codes_ghana.json');
+        final String jsonString = await rootBundle.loadString(jsonFileName);
         final List<dynamic> jsonData = json.decode(jsonString) as List;
         
         for (final item in jsonData) {
@@ -122,6 +198,7 @@ class USSDDataService {
       final sectionsWithFavorites = await loadFavoritesFromStorage(sections);
       
       _cachedSections = sectionsWithFavorites;
+      _cachedCountry = selectedCountry;
       return sectionsWithFavorites;
     } catch (e) {
       print('Error loading USSD data: $e');
@@ -141,6 +218,16 @@ class USSDDataService {
       case 'mobile money':
       case 'mobilemoney':
         return 'mobile_money';
+      case 'device info':
+        return 'device_info';
+      case 'call management':
+        return 'call_management';
+      case 'account management':
+        return 'account_management';
+      case 'customer service':
+        return 'customer_service';
+      case 'transport':
+        return 'transport';
       default:
         return 'other';
     }
@@ -158,6 +245,16 @@ class USSDDataService {
       case 'mobile money':
       case 'mobilemoney':
         return '💰';
+      case 'device info':
+        return '📲';
+      case 'call management':
+        return '📞';
+      case 'account management':
+        return '👤';
+      case 'customer service':
+        return '🎧';
+      case 'transport':
+        return '🚗';
       default:
         return '📋';
     }
@@ -175,6 +272,16 @@ class USSDDataService {
       case 'mobile money':
       case 'mobilemoney':
         return '#6F42C1';
+      case 'device info':
+        return '#17A2B8';
+      case 'call management':
+        return '#E83E8C';
+      case 'account management':
+        return '#FD7E14';
+      case 'customer service':
+        return '#20C997';
+      case 'transport':
+        return '#F012BE';
       default:
         return '#6C757D';
     }
@@ -192,6 +299,16 @@ class USSDDataService {
       case 'mobile money':
       case 'mobilemoney':
         return 'Mobile money and digital payment services';
+      case 'device info':
+        return 'Device information and diagnostic codes';
+      case 'call management':
+        return 'Call forwarding, waiting, and caller ID';
+      case 'account management':
+        return 'Check balance, usage, and refill account';
+      case 'customer service':
+        return 'Customer support and service contacts';
+      case 'transport':
+        return 'Ride hailing and transport services';
       default:
         return 'Other services';
     }

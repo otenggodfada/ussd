@@ -1,0 +1,211 @@
+[
+  {
+    "name": "Bank of Kigali",
+    "code": "*550#",
+    "category": "Banking",
+    "description": "Bank of Kigali mobile banking - BK Urubuga",
+    "provider": "Bank of Kigali",
+    "network": "All Networks",
+    "id": "rw_0001",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Equity Bank Rwanda",
+    "code": "*595#",
+    "category": "Banking",
+    "description": "Equity Bank mobile banking",
+    "provider": "Equity Bank",
+    "network": "All Networks",
+    "id": "rw_0002",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "I&M Bank Rwanda",
+    "code": "*512#",
+    "category": "Banking",
+    "description": "I&M Bank mobile banking",
+    "provider": "I&M Bank",
+    "network": "All Networks",
+    "id": "rw_0003",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Ecobank Rwanda",
+    "code": "*550*0#",
+    "category": "Banking",
+    "description": "Ecobank mobile banking",
+    "provider": "Ecobank",
+    "network": "All Networks",
+    "id": "rw_0004",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Cogebanque",
+    "code": "*737#",
+    "category": "Banking",
+    "description": "Cogebanque mobile banking",
+    "provider": "Cogebanque",
+    "network": "All Networks",
+    "id": "rw_0005",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "KCB Rwanda",
+    "code": "*501#",
+    "category": "Banking",
+    "description": "KCB Bank mobile banking",
+    "provider": "KCB Rwanda",
+    "network": "All Networks",
+    "id": "rw_0006",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN Mobile Money",
+    "code": "*182#",
+    "category": "Mobile Money",
+    "description": "MTN Mobile Money Rwanda - MoMo",
+    "provider": "MTN Mobile Money",
+    "network": "MTN",
+    "id": "rw_0007",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN MoMo Balance",
+    "code": "*182*6#",
+    "category": "Mobile Money",
+    "description": "Check MTN MoMo balance",
+    "provider": "MTN Mobile Money",
+    "network": "MTN",
+    "id": "rw_0008",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN MoMo PIN Change",
+    "code": "*182*5#",
+    "category": "Mobile Money",
+    "description": "Change MTN MoMo PIN",
+    "provider": "MTN Mobile Money",
+    "network": "MTN",
+    "id": "rw_0009",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Airtel Money Rwanda",
+    "code": "*500#",
+    "category": "Mobile Money",
+    "description": "Airtel Money mobile money services",
+    "provider": "Airtel Money",
+    "network": "Airtel",
+    "id": "rw_0010",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Airtel Money Balance",
+    "code": "*500*6#",
+    "category": "Mobile Money",
+    "description": "Check Airtel Money balance",
+    "provider": "Airtel Money",
+    "network": "Airtel",
+    "id": "rw_0011",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN Balance Check",
+    "code": "*182*1#",
+    "category": "Telecom",
+    "description": "Check MTN airtime balance",
+    "provider": "MTN Rwanda",
+    "network": "MTN",
+    "id": "rw_0012",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN Data Bundles",
+    "code": "*155#",
+    "category": "Telecom",
+    "description": "Buy MTN data bundles",
+    "provider": "MTN Rwanda",
+    "network": "MTN",
+    "id": "rw_0013",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "MTN My Number",
+    "code": "*123#",
+    "category": "Telecom",
+    "description": "Check your MTN number",
+    "provider": "MTN Rwanda",
+    "network": "MTN",
+    "id": "rw_0014",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Airtel Balance Check",
+    "code": "*131#",
+    "category": "Telecom",
+    "description": "Check Airtel balance",
+    "provider": "Airtel Rwanda",
+    "network": "Airtel",
+    "id": "rw_0015",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "Airtel Data Bundles",
+    "code": "*175#",
+    "category": "Telecom",
+    "description": "Buy Airtel data bundles",
+    "provider": "Airtel Rwanda",
+    "network": "Airtel",
+    "id": "rw_0016",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "REG Electricity",
+    "code": "*182*2#",
+    "category": "Utilities",
+    "description": "Pay REG electricity bills",
+    "provider": "REG",
+    "network": "All Networks",
+    "id": "rw_0017",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "DSTV Rwanda",
+    "code": "*182*7*1#",
+    "category": "Utilities",
+    "description": "Pay DSTV subscription",
+    "provider": "DSTV Rwanda",
+    "network": "All Networks",
+    "id": "rw_0018",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  },
+  {
+    "name": "StarTimes Rwanda",
+    "code": "*182*7*2#",
+    "category": "Utilities",
+    "description": "Pay StarTimes subscription",
+    "provider": "StarTimes Rwanda",
+    "network": "All Networks",
+    "id": "rw_0019",
+    "country": "Rwanda",
+    "last_updated": "2025-10-18T00:00:00Z"
+  }
+]
