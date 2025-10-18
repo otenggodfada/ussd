@@ -231,11 +231,42 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   bool _isExpenseMessage(SMSMessage message) {
     final content = message.content.toLowerCase();
     
-    // Keywords that indicate money going out
+    // First check if this is actually revenue (to avoid false positives)
+    // "payment received", "transfer received", etc. should be revenue, not expense
+    if (_hasReceiveContext(content)) {
+      return false;
+    }
+    
+    // Special case: Money withdrawn FROM savings account = expense
+    if (_isSavingsWithdrawal(content)) {
+      return true;
+    }
+    
+    // Special case: Money sent TO savings account = revenue (not expense)
+    if (_isSavingsDeposit(content)) {
+      return false;
+    }
+    
+    // Airtime purchase = expense
+    if (content.contains('airtime') && (content.contains('purchase') || content.contains('buy') || content.contains('bought') || content.contains('recharge'))) {
+      return true;
+    }
+    
+    // Data purchase = expense
+    if (content.contains('data') && (content.contains('purchase') || content.contains('buy') || content.contains('bought') || content.contains('bundle'))) {
+      return true;
+    }
+    
+    // Mobile Money specific expense patterns
+    if (_isMobileMoneyExpense(content)) {
+      return true;
+    }
+    
+    // Keywords that indicate money going out (sent)
     final expenseKeywords = [
       'debited', 'withdrawn', 'spent', 'paid', 'charged', 'deducted',
       'purchase', 'payment', 'bill', 'fee', 'cost', 'expense',
-      'sent', 'transfer', 'withdrawal', 'purchase', 'buy'
+      'sent to', 'transfer to', 'withdrawal', 'buy', 'bought', 'cash out'
     ];
     
     return expenseKeywords.any((keyword) => content.contains(keyword));
@@ -244,14 +275,121 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   bool _isRevenueMessage(SMSMessage message) {
     final content = message.content.toLowerCase();
     
-    // Keywords that indicate money coming in
+    // Check if this has "received" context (payment received, transfer received, etc.)
+    if (_hasReceiveContext(content)) {
+      return true;
+    }
+    
+    // Special case: Money sent TO savings account = revenue
+    if (_isSavingsDeposit(content)) {
+      return true;
+    }
+    
+    // Special case: Money withdrawn FROM savings account = expense (not revenue)
+    if (_isSavingsWithdrawal(content)) {
+      return false;
+    }
+    
+    // Keywords that indicate money coming in (received)
     final revenueKeywords = [
       'credited', 'received', 'deposited', 'refund', 'cashback',
       'bonus', 'reward', 'earned', 'income', 'salary', 'wage',
-      'received', 'deposit', 'credit', 'refund', 'return'
+      'deposit', 'credit', 'return'
     ];
     
     return revenueKeywords.any((keyword) => content.contains(keyword));
+  }
+  
+  bool _hasReceiveContext(String content) {
+    // Check if the message indicates receiving money
+    // This helps avoid false positives like "payment received" being counted as expense
+    final receivePatterns = [
+      'payment received',
+      'transfer received',
+      'you received',
+      'you have received',
+      'received from',
+      'credited to',
+      'credited with',
+      'deposited to',
+      'deposited into',
+      // Mobile Money specific patterns
+      'momo received',
+      'mobile money received',
+      'cash in from',
+      'received ghs',
+      'received ghc',
+      'you got',
+      'money from',
+      'sent you',
+      'transferred to you',
+    ];
+    
+    return receivePatterns.any((pattern) => content.contains(pattern));
+  }
+  
+  bool _isSavingsDeposit(String content) {
+    // Check if message is about money sent TO savings
+    final savingsDepositPatterns = [
+      'sent to savings',
+      'transfer to savings',
+      'transferred to savings',
+      'deposit to savings',
+      'deposited to savings',
+      'saved to savings',
+      'moved to savings',
+      'credited to savings',
+      'add to savings',
+      'added to savings',
+    ];
+    
+    return savingsDepositPatterns.any((pattern) => content.contains(pattern));
+  }
+  
+  bool _isSavingsWithdrawal(String content) {
+    // Check if message is about money withdrawn FROM savings
+    final savingsWithdrawalPatterns = [
+      'withdrawn from savings',
+      'withdrawal from savings',
+      'debited from savings',
+      'removed from savings',
+      'transferred from savings',
+      'transfer from savings',
+      'moved from savings',
+    ];
+    
+    return savingsWithdrawalPatterns.any((pattern) => content.contains(pattern));
+  }
+  
+  bool _isMobileMoneyExpense(String content) {
+    // Mobile Money specific expense patterns (money sent/paid)
+    final momoExpensePatterns = [
+      'sent to',
+      'momo sent',
+      'mobile money sent',
+      'cash out to',
+      'transferred to',
+      'paid to',
+      'payment to',
+      'send money to',
+      'you sent',
+      'you have sent',
+      'you paid',
+    ];
+    
+    // Check for "sent" context but not "sent you" or "sent to you" (which is revenue)
+    if (content.contains('sent') && !content.contains('sent you') && !content.contains('sent to you')) {
+      if (momoExpensePatterns.any((pattern) => content.contains(pattern))) {
+        return true;
+      }
+    }
+    
+    // Other mobile money expenses
+    if (momoExpensePatterns.any((pattern) => content.contains(pattern))) {
+      return true;
+    }
+    
+    return false;
   }
 
   @override
