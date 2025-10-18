@@ -238,18 +238,47 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
     );
   }
 
-  void _toggleSearchFavorite(USSDCode code) {
+  Future<void> _toggleSearchFavorite(USSDCode code) async {
+    // Toggle the favorite status
+    final updatedCode = await USSDDataService.toggleFavorite(code);
+    
+    if (!mounted) return;
+    
+    // Update the search results list
+    setState(() {
+      final index = _searchResults.indexWhere((c) => c.id == code.id);
+      if (index != -1) {
+        _searchResults[index] = updatedCode;
+      }
+      
+      // Also update in sections if it exists
+      for (var i = 0; i < _sections.length; i++) {
+        final section = _sections[i];
+        final codeIndex = section.codes.indexWhere((c) => c.id == code.id);
+        if (codeIndex != -1) {
+          section.codes[codeIndex] = updatedCode;
+          break;
+        }
+      }
+    });
+    
+    // Clear cache so next load gets updated data
+    USSDDataService.clearCache();
+    
     // Log favorite activity
     ActivityService.logActivity(
       type: ActivityType.ussdCodeFavorited,
-      title: code.isFavorite ? 'Removed from favorites' : 'Added to favorites',
-      description: '${code.name} - ${code.provider}',
-      metadata: {'code': code.code, 'provider': code.provider},
+      title: updatedCode.isFavorite ? 'Added to favorites' : 'Removed from favorites',
+      description: '${updatedCode.name} - ${updatedCode.provider}',
+      metadata: {'code': updatedCode.code, 'provider': updatedCode.provider},
     );
+    
+    if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${code.name} ${code.isFavorite ? 'removed from' : 'added to'} favorites'),
+        content: Text('${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -291,7 +320,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
 }
 
 // Section Details Screen with Tabs
-class _SectionDetailsScreen extends StatelessWidget {
+class _SectionDetailsScreen extends StatefulWidget {
   final USSDSection section;
   final Map<String, List<USSDCode>> codesByProvider;
 
@@ -301,9 +330,22 @@ class _SectionDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<_SectionDetailsScreen> createState() => _SectionDetailsScreenState();
+}
+
+class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
+  late Map<String, List<USSDCode>> _codesByProvider;
+
+  @override
+  void initState() {
+    super.initState();
+    _codesByProvider = Map.from(widget.codesByProvider);
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final providers = codesByProvider.keys.toList();
+    final providers = _codesByProvider.keys.toList();
 
     return DefaultTabController(
       length: providers.length,
@@ -317,13 +359,13 @@ class _SectionDetailsScreen extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  Text(section.icon, style: const TextStyle(fontSize: 20)),
+                  Text(widget.section.icon, style: const TextStyle(fontSize: 20)),
                   const SizedBox(width: 8),
-                  Text(section.name),
+                  Text(widget.section.name),
                 ],
               ),
               Text(
-                '${providers.length} providers • ${section.codes.length} codes',
+                '${providers.length} providers • ${widget.section.codes.length} codes',
                 style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
@@ -343,7 +385,7 @@ class _SectionDetailsScreen extends StatelessWidget {
               fontSize: 14,
             ),
             tabs: providers.map((provider) {
-              final codes = codesByProvider[provider]!;
+              final codes = _codesByProvider[provider]!;
               return Tab(
                 child: Row(
                   children: [
@@ -372,7 +414,7 @@ class _SectionDetailsScreen extends StatelessWidget {
         ),
         body: TabBarView(
           children: providers.map((provider) {
-            final codes = codesByProvider[provider]!;
+            final codes = _codesByProvider[provider]!;
             return ListView.builder(
               padding: const EdgeInsets.all(16.0),
               itemCount: codes.length,
@@ -443,18 +485,40 @@ class _SectionDetailsScreen extends StatelessWidget {
     );
   }
 
-  void _toggleFavorite(BuildContext context, USSDCode code) {
+  Future<void> _toggleFavorite(BuildContext context, USSDCode code) async {
+    // Toggle the favorite status
+    final updatedCode = await USSDDataService.toggleFavorite(code);
+    
+    if (!mounted) return;
+    
+    // Update the local state
+    setState(() {
+      // Find and update the code in the provider map
+      _codesByProvider.forEach((provider, codes) {
+        final index = codes.indexWhere((c) => c.id == code.id);
+        if (index != -1) {
+          codes[index] = updatedCode;
+        }
+      });
+    });
+    
+    // Clear cache so next load gets updated data
+    USSDDataService.clearCache();
+    
     // Log favorite activity
     ActivityService.logActivity(
       type: ActivityType.ussdCodeFavorited,
-      title: code.isFavorite ? 'Removed from favorites' : 'Added to favorites',
-      description: '${code.name} - ${code.provider}',
-      metadata: {'code': code.code, 'provider': code.provider},
+      title: updatedCode.isFavorite ? 'Added to favorites' : 'Removed from favorites',
+      description: '${updatedCode.name} - ${updatedCode.provider}',
+      metadata: {'code': updatedCode.code, 'provider': updatedCode.provider},
     );
+    
+    if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${code.name} ${code.isFavorite ? 'removed from' : 'added to'} favorites'),
+        content: Text('${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
+        duration: const Duration(seconds: 2),
       ),
     );
   }

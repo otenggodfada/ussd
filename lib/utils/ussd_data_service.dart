@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
 import 'package:excel/excel.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/ussd_model.dart';
 
 class USSDDataService {
   static List<USSDSection>? _cachedSections;
+  static const String _favoritesKey = 'favorite_ussd_codes';
   
   static Future<List<USSDSection>> getOfflineUSSDData() async {
     if (_cachedSections != null) {
@@ -103,8 +105,11 @@ class USSDDataService {
         ));
       });
       
-      _cachedSections = sections;
-      return sections;
+      // Load favorites from storage
+      final sectionsWithFavorites = await loadFavoritesFromStorage(sections);
+      
+      _cachedSections = sectionsWithFavorites;
+      return sectionsWithFavorites;
     } catch (e) {
       print('Error loading USSD data: $e');
       return _getFallbackData();
@@ -422,5 +427,58 @@ class USSDDataService {
     
     mostUsed.sort((a, b) => b.usageCount.compareTo(a.usageCount));
     return mostUsed.take(10).toList();
+  }
+
+  // Save favorite status to persistent storage
+  static Future<void> saveFavorite(String codeId, bool isFavorite) async {
+    final prefs = await SharedPreferences.getInstance();
+    final favorites = await getFavoriteIds();
+    
+    if (isFavorite) {
+      favorites.add(codeId);
+    } else {
+      favorites.remove(codeId);
+    }
+    
+    await prefs.setStringList(_favoritesKey, favorites.toList());
+  }
+
+  // Get list of favorite code IDs from storage
+  static Future<Set<String>> getFavoriteIds() async {
+    final prefs = await SharedPreferences.getInstance();
+    final favoritesList = prefs.getStringList(_favoritesKey) ?? [];
+    return favoritesList.toSet();
+  }
+
+  // Load favorites from storage and update sections
+  static Future<List<USSDSection>> loadFavoritesFromStorage(List<USSDSection> sections) async {
+    final favoriteIds = await getFavoriteIds();
+    
+    return sections.map((section) {
+      final updatedCodes = section.codes.map((code) {
+        return code.copyWith(isFavorite: favoriteIds.contains(code.id));
+      }).toList();
+      
+      return USSDSection(
+        id: section.id,
+        name: section.name,
+        description: section.description,
+        icon: section.icon,
+        color: section.color,
+        codes: updatedCodes,
+      );
+    }).toList();
+  }
+
+  // Toggle favorite status for a specific code
+  static Future<USSDCode> toggleFavorite(USSDCode code) async {
+    final newFavoriteStatus = !code.isFavorite;
+    await saveFavorite(code.id, newFavoriteStatus);
+    return code.copyWith(isFavorite: newFavoriteStatus);
+  }
+
+  // Clear cache to force reload with updated favorites
+  static void clearCache() {
+    _cachedSections = null;
   }
 }

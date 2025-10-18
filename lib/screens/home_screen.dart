@@ -16,27 +16,29 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
   
-  final List<Widget> _screens = [
-    const DashboardScreen(),    // index 0 - Dashboard button
-    const USSDCodesScreen(),    // index 1 - USSD button
-    const SMSInsightsScreen(),  // index 2 - SMS button (center)
-    const FavoritesScreen(),    // index 3 - Favorites button
-    const SettingsScreen(),     // index 4 - Settings button
-  ];
+  void _navigateToScreen(int index) {
+    setState(() {
+      _currentIndex = index;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final screens = [
+      DashboardScreen(onNavigate: _navigateToScreen),    // index 0 - Dashboard button
+      const USSDCodesScreen(),                            // index 1 - USSD button
+      const SMSInsightsScreen(),                          // index 2 - SMS button (center)
+      const FavoritesScreen(),                            // index 3 - Favorites button
+      const SettingsScreen(),                             // index 4 - Settings button
+    ];
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
-      body: _screens[_currentIndex],
+      body: screens[_currentIndex],
       extendBody: true,
       bottomNavigationBar: CustomBottomNav(
         currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
+        onTap: _navigateToScreen,
       ),
     );
   }

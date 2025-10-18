@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:ussd_plus/theme/theme_generator.dart';
+import 'package:ussd_plus/widgets/app_logo.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -8,7 +8,6 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gradient = ThemeGenerator.generateGradient(ThemeGenerator.themeNumber);
     
     return CupertinoPageScaffold(
       navigationBar: const CupertinoNavigationBar(
@@ -19,25 +18,10 @@ class AboutScreen extends StatelessWidget {
         child: Column(
           children: [
             // App Icon and Name
-            Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(
-                gradient: gradient,
-                borderRadius: BorderRadius.circular(24.0),
-                boxShadow: [
-                  BoxShadow(
-                    color: theme.colorScheme.primary.withOpacity(0.3),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: const Icon(
-                Icons.phone_android,
-                size: 64,
-                color: Colors.white,
-              ),
+            const SizedBox(height: 40),
+            const AppLogo(
+              size: 100,
+              showText: false,
             ),
             
             const SizedBox(height: 24.0),

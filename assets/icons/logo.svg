@@ -1,0 +1,40 @@
+<svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background Circle with Gradient -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#6366F1;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#8B5CF6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#10B981;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#3B82F6;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Main Circle Background -->
+  <circle cx="100" cy="100" r="90" fill="url(#grad1)"/>
+  
+  <!-- Phone Icon -->
+  <rect x="65" y="50" width="70" height="100" rx="10" fill="white" opacity="0.95"/>
+  <rect x="70" y="55" width="60" height="85" rx="5" fill="url(#grad2)"/>
+  
+  <!-- USSD Code Symbol -->
+  <text x="100" y="105" font-family="monospace" font-size="24" font-weight="bold" fill="white" text-anchor="middle">*123#</text>
+  
+  <!-- Message Bubbles -->
+  <circle cx="50" cy="70" r="8" fill="white" opacity="0.9"/>
+  <circle cx="40" cy="85" r="6" fill="white" opacity="0.8"/>
+  <circle cx="150" cy="130" r="8" fill="white" opacity="0.9"/>
+  <circle cx="160" cy="115" r="6" fill="white" opacity="0.8"/>
+  
+  <!-- Plus Sign -->
+  <g transform="translate(145, 45)">
+    <circle cx="0" cy="0" r="20" fill="#10B981"/>
+    <line x1="-10" y1="0" x2="10" y2="0" stroke="white" stroke-width="3" stroke-linecap="round"/>
+    <line x1="0" y1="-10" x2="0" y2="10" stroke="white" stroke-width="3" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Bottom Accent -->
+  <path d="M 30 160 Q 100 180 170 160" stroke="white" stroke-width="4" fill="none" opacity="0.3" stroke-linecap="round"/>
+</svg>
+

@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:ussd_plus/theme/theme_generator.dart';
 
 class QuickActionsCard extends StatelessWidget {
-  const QuickActionsCard({super.key});
+  final Function(int)? onNavigate;
+
+  const QuickActionsCard({
+    super.key,
+    this.onNavigate,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +64,10 @@ class QuickActionsCard extends StatelessWidget {
                   Icons.search,
                   gradient,
                   () {
-                    // Navigate to USSD search
+                    // Navigate to USSD Codes screen (index 1)
+                    if (onNavigate != null) {
+                      onNavigate!(1);
+                    }
                   },
                 ),
               ),
@@ -71,7 +79,10 @@ class QuickActionsCard extends StatelessWidget {
                   Icons.sms,
                   gradient,
                   () {
-                    // Navigate to SMS analysis
+                    // Navigate to SMS Insights screen (index 2)
+                    if (onNavigate != null) {
+                      onNavigate!(2);
+                    }
                   },
                 ),
               ),
@@ -87,7 +98,10 @@ class QuickActionsCard extends StatelessWidget {
                   Icons.favorite,
                   gradient,
                   () {
-                    // Navigate to favorites
+                    // Navigate to Favorites screen (index 3)
+                    if (onNavigate != null) {
+                      onNavigate!(3);
+                    }
                   },
                 ),
               ),
@@ -99,7 +113,10 @@ class QuickActionsCard extends StatelessWidget {
                   Icons.settings,
                   gradient,
                   () {
-                    // Navigate to settings
+                    // Navigate to Settings screen (index 4)
+                    if (onNavigate != null) {
+                      onNavigate!(4);
+                    }
                   },
                 ),
               ),
