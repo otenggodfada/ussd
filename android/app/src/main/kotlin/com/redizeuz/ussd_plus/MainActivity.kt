@@ -1,4 +1,4 @@
-package com.example.ussd_plus
+package com.redizeuz.ussd_plus
 
 import android.Manifest
 import android.content.pm.PackageManager

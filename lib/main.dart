@@ -4,10 +4,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:ussd_plus/theme/theme_generator.dart';
 import 'package:ussd_plus/screens/splash_screen.dart';
+import 'package:ussd_plus/screens/onboarding_screen.dart';
 import 'package:ussd_plus/models/ussd_model.dart';
 import 'package:ussd_plus/models/sms_model.dart';
 import 'package:ussd_plus/utils/admob_service.dart';
 import 'package:ussd_plus/utils/location_service.dart';
+import 'package:ussd_plus/utils/onboarding_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -91,7 +93,55 @@ class USSDPlusApp extends StatelessWidget {
       title: 'USSD+',
       debugShowCheckedModeBanner: false,
       theme: ThemeGenerator.generateTheme(1), // Default theme
-      home: const SplashScreen(),
+      home: const AppInitializer(),
     );
+  }
+}
+
+class AppInitializer extends StatefulWidget {
+  const AppInitializer({super.key});
+
+  @override
+  State<AppInitializer> createState() => _AppInitializerState();
+}
+
+class _AppInitializerState extends State<AppInitializer> {
+  bool _isLoading = true;
+  bool _showOnboarding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkOnboardingStatus();
+  }
+
+  Future<void> _checkOnboardingStatus() async {
+    try {
+      final onboardingCompleted = await OnboardingService.isOnboardingCompleted();
+      
+      setState(() {
+        _showOnboarding = !onboardingCompleted;
+        _isLoading = false;
+      });
+    } catch (e) {
+      // If there's an error, show onboarding as fallback
+      setState(() {
+        _showOnboarding = true;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const SplashScreen();
+    }
+    
+    if (_showOnboarding) {
+      return const OnboardingScreen();
+    }
+    
+    return const SplashScreen();
   }
 }

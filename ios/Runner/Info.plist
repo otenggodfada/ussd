@@ -49,9 +49,64 @@
 	<array>
 		<string>tel</string>
 	</array>
+	<!-- Location Permissions -->
 	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>USSD+ needs your location to automatically detect your country and show relevant USSD codes.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>USSD+ needs your location to automatically detect your country and show relevant USSD codes.</string>
 	<key>NSLocationAlwaysUsageDescription</key>
 	<string>USSD+ needs your location to automatically detect your country and show relevant USSD codes.</string>
+	
+	<!-- SMS Permissions -->
+	<key>NSContactsUsageDescription</key>
+	<string>USSD+ needs access to your contacts to help you manage USSD codes and SMS messages.</string>
+	
+	<!-- Phone Call Permissions -->
+	<key>NSPhoneNumberUsageDescription</key>
+	<string>USSD+ needs access to make phone calls for USSD codes and emergency services.</string>
+	
+	<!-- Notification Permissions -->
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>USSD+ would like to send you notifications about important USSD codes and updates.</string>
+	
+	<!-- Background App Refresh -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-processing</string>
+		<string>background-fetch</string>
+	</array>
+	
+	<!-- App Transport Security for HTTP requests -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>ip-api.com</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSExceptionMinimumTLSVersion</key>
+				<string>TLSv1.0</string>
+			</dict>
+		</dict>
+	</dict>
+	
+	<!-- Required for iOS 14+ -->
+	<key>NSUserTrackingUsageDescription</key>
+	<string>USSD+ uses tracking to provide personalized USSD code recommendations.</string>
+	
+	<!-- Camera Permission (if needed for QR codes) -->
+	<key>NSCameraUsageDescription</key>
+	<string>USSD+ needs camera access to scan QR codes for USSD services.</string>
+	
+	<!-- Photo Library Permission -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>USSD+ needs access to your photo library to save and share USSD codes.</string>
+	
+	<!-- Microphone Permission (if needed for voice features) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>USSD+ needs microphone access for voice-activated USSD code dialing.</string>
 </dict>
 </plist>
