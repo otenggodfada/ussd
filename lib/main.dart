@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -49,8 +50,8 @@ void main() async {
 }
 
 Future<void> _requestPermissions() async {
-  // Only request permissions on mobile platforms
-  if (Platform.isAndroid || Platform.isIOS) {
+  // Only request permissions on mobile platforms (not web)
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     // Request SMS permission for Android/iOS
     if (await Permission.sms.isDenied) {
       await Permission.sms.request();
@@ -69,8 +70,8 @@ Future<void> _requestPermissions() async {
 }
 
 Future<void> _initializeLocationAndDetectCountry() async {
-  // Only run on mobile platforms
-  if (Platform.isAndroid || Platform.isIOS) {
+  // Only run on mobile platforms (not web)
+  if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
     try {
       // Check if auto-detect is enabled (default: true)
       final autoDetectEnabled = await LocationService.isAutoDetectEnabled();
