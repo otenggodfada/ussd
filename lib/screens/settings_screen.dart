@@ -5,7 +5,6 @@ import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/location_service.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ussd_plus/widgets/coin_premium_feature_card.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/utils/premium_features_service.dart';
@@ -27,7 +26,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String _selectedCountry = 'Ghana';
   String? _detectedCountry;
   bool _autoDetectEnabled = true;
-  bool _isDetecting = false;
   int _coinBalance = 0;
   final ScrollController _scrollController = ScrollController();
   
@@ -88,56 +86,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
   
-  Future<void> _detectCountryNow() async {
-    setState(() {
-      _isDetecting = true;
-    });
-    
-    try {
-      final detectedCountry = await LocationService.detectCountryFromLocation();
-      
-      if (detectedCountry != null) {
-        setState(() {
-          _detectedCountry = detectedCountry;
-          _selectedCountry = detectedCountry;
-          _isDetecting = false;
-        });
-        
-        // Clear manual selection to allow auto-detection
-        final prefs = await SharedPreferences.getInstance();
-        await prefs.remove('selected_country');
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Country detected: $detectedCountry'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      } else {
-        setState(() {
-          _isDetecting = false;
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not detect country. Please select manually.'),
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    } catch (e) {
-      setState(() {
-        _isDetecting = false;
-      });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error: $e'),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -184,11 +132,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   _autoDetectEnabled = value;
                 });
                 
-                if (value) {
-                  // Try to detect country immediately
-                  _detectCountryNow();
-                }
-                
                 ActivityService.logActivity(
                   type: ActivityType.settingsChanged,
                   title: 'Auto-detect country ${value ? "enabled" : "disabled"}',
@@ -198,14 +141,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
           
-          // Detect now button
-          if (_autoDetectEnabled)
-            _buildSettingsTile(
-              icon: _isDetecting ? Icons.hourglass_empty : Icons.my_location,
-              title: _isDetecting ? 'Detecting...' : 'Detect Country Now',
-              subtitle: 'Use GPS to find your current location',
-              onTap: _isDetecting ? null : () => _detectCountryNow(),
-            ),
           
           // Manual country selector
           _buildSettingsTile(
@@ -213,24 +148,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: 'Country/Region',
             subtitle: _selectedCountry,
             onTap: () => _showCountrySelector(context),
-          ),
-          _buildSettingsTile(
-            icon: Icons.palette,
-            title: 'Theme',
-            subtitle: 'Customize app appearance',
-            onTap: () => _showThemeOptions(context),
-          ),
-          _buildSettingsTile(
-            icon: Icons.notifications,
-            title: 'Notifications',
-            subtitle: 'Manage notification preferences',
-            onTap: () => _showNotificationSettings(context),
-          ),
-          _buildSettingsTile(
-            icon: Icons.language,
-            title: 'Language',
-            subtitle: 'English',
-            onTap: () => _showLanguageOptions(context),
           ),
           
           const SizedBox(height: 24.0),
@@ -523,67 +440,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showThemeOptions(BuildContext context) {
-    // Log settings activity
-    ActivityService.logActivity(
-      type: ActivityType.settingsChanged,
-      title: 'Opened theme settings',
-      description: 'Viewing theme customization options',
-    );
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Theme Options'),
-        content: const Text('Theme customization will be available in future updates.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showNotificationSettings(BuildContext context) {
-    // Log settings activity
-    ActivityService.logActivity(
-      type: ActivityType.settingsChanged,
-      title: 'Opened notification settings',
-      description: 'Viewing notification preferences',
-    );
-    
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Notification Settings'),
-        content: const Text('Notification preferences will be available in future updates.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showLanguageOptions(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Language Options'),
-        content: const Text('Language selection will be available in future updates.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 
   void _showDataManagement(BuildContext context) {
     showDialog(
