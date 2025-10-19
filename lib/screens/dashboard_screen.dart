@@ -7,6 +7,7 @@ import 'package:ussd_plus/widgets/quick_dial_card.dart';
 import 'package:ussd_plus/widgets/app_logo.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
+import 'package:ussd_plus/screens/notifications_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final Function(int)? onNavigate;
@@ -124,7 +125,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 color: theme.colorScheme.onSurface,
               ),
               onPressed: () {
-                // Handle notifications
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const NotificationsScreen(),
+                  ),
+                );
               },
             ),
           ),

@@ -20,6 +20,7 @@ class USSDCodeCard extends StatelessWidget {
     
     return GestureDetector(
       onTap: onTap,
+      behavior: HitTestBehavior.translucent,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -77,28 +78,78 @@ class USSDCodeCard extends StatelessWidget {
                 ),
                 
                 // Favorite Button
-                GestureDetector(
-                  onTap: onFavorite,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: code.isFavorite 
-                          ? Colors.red.withOpacity(0.15)
-                          : theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(
-                        color: code.isFavorite 
-                            ? Colors.red.withOpacity(0.3)
-                            : theme.colorScheme.onSurface.withOpacity(0.2),
-                        width: 1,
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Remove from Favorites Button (only show if favorited)
+                    if (code.isFavorite)
+                      GestureDetector(
+                        onTap: () {
+                          onFavorite();
+                        },
+                        behavior: HitTestBehavior.opaque,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                              color: Colors.red.withOpacity(0.3),
+                              width: 1,
+                            ),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                Icons.remove_circle_outline,
+                                color: Colors.red,
+                                size: 16,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Remove',
+                                style: TextStyle(
+                                  color: Colors.red,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    
+                    if (code.isFavorite) const SizedBox(width: 8),
+                    
+                    // Favorite Status Icon
+                    GestureDetector(
+                      onTap: () {
+                        onFavorite();
+                      },
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: code.isFavorite 
+                              ? Colors.red.withOpacity(0.15)
+                              : theme.colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: code.isFavorite 
+                                ? Colors.red.withOpacity(0.3)
+                                : theme.colorScheme.onSurface.withOpacity(0.2),
+                            width: 1,
+                          ),
+                        ),
+                        child: Icon(
+                          code.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                          color: code.isFavorite ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.5),
+                          size: 18,
+                        ),
                       ),
                     ),
-                    child: Icon(
-                      code.isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                      color: code.isFavorite ? Colors.red : theme.colorScheme.onSurface.withOpacity(0.5),
-                      size: 18,
-                    ),
-                  ),
+                  ],
                 ),
               ],
             ),

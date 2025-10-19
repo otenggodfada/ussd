@@ -35,7 +35,7 @@ A powerful Flutter app that combines offline USSD code management with AI-powere
 - **Hive** for local database
 - **Permission Handler** for runtime permissions
 - **Flutter Local Notifications** for notifications
-- **AdMob** integration (placeholder)
+- **AdMob** integration for monetization
 
 ## 📦 Installation
 
@@ -97,7 +97,7 @@ The reskin engine will automatically:
 ### Settings
 - App preferences and configuration
 - Privacy policy and about information
-- Premium features (placeholder)
+- Premium features and advanced analytics
 
 ## 🔧 Configuration
 

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:ussd_plus/screens/home_screen.dart';
 import 'package:ussd_plus/utils/location_service.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
+import 'package:ussd_plus/utils/admob_service.dart';
 import 'package:ussd_plus/widgets/app_logo.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -22,6 +24,7 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
   double _progress = 0.0;
   String _appVersion = '';
   bool _hasError = false;
+  bool _isFirstLaunch = true;
 
   @override
   void initState() {
@@ -57,6 +60,10 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
 
   Future<void> _initializeApp() async {
     try {
+      // Step 0: Check if this is first launch
+      final prefs = await SharedPreferences.getInstance();
+      _isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+      
       // Step 1: Get app info
       setState(() {
         _statusText = 'Initializing...';
@@ -110,7 +117,18 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       
       await USSDDataService.getOfflineUSSDData();
       
-      // Step 4: Complete
+      // Step 4: Load app open ad
+      setState(() {
+        _statusText = 'Loading ads...';
+        _progress = 0.85;
+      });
+      
+      // Load app open ad in background
+      print('Loading app open ad from splash screen...');
+      AdMobService.loadAppOpenAd();
+      await Future.delayed(const Duration(milliseconds: 1500)); // Give more time for ad to load
+      
+      // Step 5: Complete
       setState(() {
         _statusText = 'Ready!';
         _progress = 1.0;
@@ -118,8 +136,32 @@ class _SplashScreenState extends State<SplashScreen> with TickerProviderStateMix
       
       await Future.delayed(const Duration(milliseconds: 600));
       
-      // Navigate to home screen
+      // Show app open ad if available, then navigate
       if (mounted) {
+        if (_isFirstLaunch) {
+          // Mark that app has been launched first
+          await prefs.setBool('is_first_launch', false);
+        }
+        
+        // Show app open ad every time the app loads
+        Future.delayed(const Duration(milliseconds: 200), () {
+          print('Attempting to show app open ad...');
+          if (AdMobService.isAppOpenAdReady) {
+            print('App open ad is ready, showing...');
+            AdMobService.showAppOpenAdIfAvailable();
+          } else {
+            print('App open ad not ready yet, will show when available');
+            // Try again after a short delay
+            Future.delayed(const Duration(milliseconds: 500), () {
+              if (AdMobService.isAppOpenAdReady) {
+                print('App open ad ready on retry, showing...');
+                AdMobService.showAppOpenAdIfAvailable();
+              }
+            });
+          }
+        });
+        
+        // Navigate to home screen
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (context) => const HomeScreen()),
         );

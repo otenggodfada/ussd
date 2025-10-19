@@ -6,6 +6,13 @@ import 'package:ussd_plus/models/ussd_model.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/widgets/ussd_section_card.dart';
 import 'package:ussd_plus/widgets/ussd_code_card.dart';
+import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/screens/favorites_screen.dart';
+import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
+import 'package:ussd_plus/widgets/loading_dialog.dart';
+import 'package:ussd_plus/utils/coin_service.dart';
+import 'package:ussd_plus/utils/premium_features_service.dart';
+import 'package:ussd_plus/screens/settings_screen.dart';
 class USSDCodesScreen extends StatefulWidget {
   const USSDCodesScreen({super.key});
 
@@ -19,11 +26,20 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   List<USSDCode> _searchResults = [];
   bool _isSearching = false;
   bool _isLoading = true;
+  bool _isPremiumActive = false;
 
   @override
   void initState() {
     super.initState();
     _loadUSSDData();
+    _checkPremiumStatus();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final isActive = await PremiumFeaturesService.isFeatureActive(PremiumFeature.showAllCodesWeek);
+    setState(() {
+      _isPremiumActive = isActive;
+    });
   }
 
   Future<void> _loadUSSDData() async {
@@ -83,7 +99,12 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
           IconButton(
             icon: const Icon(Icons.favorite_rounded),
             onPressed: () {
-              // Navigate to favorites
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const FavoritesScreen(),
+                ),
+              );
             },
           ),
         ],
@@ -97,30 +118,44 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
                 // Search Bar
                 Padding(
                   padding: const EdgeInsets.all(16.0),
-                  child: TextField(
-                    controller: _searchController,
-                    style: TextStyle(color: theme.colorScheme.onSurface),
-                    decoration: InputDecoration(
-                      hintText: 'Search USSD codes...',
-                      hintStyle: TextStyle(
-                        color: theme.colorScheme.onSurface.withOpacity(0.5),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Search USSD codes',
+                        style: TextStyle(
+                          color: theme.colorScheme.onSurface.withOpacity(0.8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
-                      prefixIcon: Icon(
-                        Icons.search_rounded,
-                        color: theme.colorScheme.onSurface.withOpacity(0.7),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _searchController,
+                        style: TextStyle(color: theme.colorScheme.onSurface),
+                        decoration: InputDecoration(
+                          labelText: 'Enter search term...',
+                          labelStyle: TextStyle(
+                            color: theme.colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search_rounded,
+                            color: theme.colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          filled: true,
+                          fillColor: theme.colorScheme.surface,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(16.0),
+                            borderSide: BorderSide.none,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 16,
+                          ),
+                        ),
+                        onChanged: _searchUSSDCodes,
                       ),
-                      filled: true,
-                      fillColor: theme.colorScheme.surface,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(16.0),
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                    ),
-                    onChanged: _searchUSSDCodes,
+                    ],
                   ),
                 ),
                 
@@ -222,53 +257,147 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
             onPressed: () async {
               Navigator.pop(context);
               
-              // Make the direct call
-              try {
-                bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
-                
-                // Log copy/dial activity
-                await ActivityService.logActivity(
-                  type: ActivityType.ussdCodeCopied,
-                  title: 'Dialed ${code.name}',
-                  description: code.code,
-                );
-                
-                if (!context.mounted) return;
-                
-                if (result == true) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Dialing ${code.code}...'),
-                      duration: const Duration(seconds: 2),
-                      backgroundColor: Colors.green,
-                    ),
+              // Show consent dialog before showing rewarded ad
+              final consent = await RewardedAdConsentDialog.show(
+                context: context,
+                title: 'Dial ${code.name}',
+                description: 'Watch a short advertisement to dial this USSD code and support the app.',
+              );
+
+              if (consent == true) {
+                // User chose "Watch Ad"
+                if (AdMobService.isRewardedAdReady) {
+                  // Ad is ready, show it
+                  AdMobService.showRewardedAd(
+                    onRewarded: (reward) async {
+                      // Reward coins for watching ad
+                      final newBalance = await CoinService.rewardForRewardedAd();
+                      
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                      
+                      _performDial(code);
+                    },
                   );
                 } else {
+                  // No ad ready, show loading animation and actively load ads
+                  if (context.mounted) {
+                    LoadingDialog.show(context, 'Preparing...');
+                  }
+                  
+                  // Start loading rewarded ads
+                  AdMobService.loadRewardedAd();
+                  
+                  // Wait for up to 10 seconds for ads to load
+                  bool adLoaded = false;
+                  for (int i = 0; i < 10; i++) {
+                    await Future.delayed(const Duration(seconds: 1));
+                    if (AdMobService.isRewardedAdReady) {
+                      adLoaded = true;
+                      break;
+                    }
+                  }
+                  
+                  // Hide loading dialog
+                  if (context.mounted) {
+                    LoadingDialog.hide(context);
+                  }
+                  
+                  if (adLoaded && context.mounted) {
+                    // Ad loaded within 10 seconds, show it
+                    AdMobService.showRewardedAd(
+                      onRewarded: (reward) async {
+                        // Reward coins for watching ad
+                        final newBalance = await CoinService.rewardForRewardedAd();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                        
+                        _performDial(code);
+                      },
+                    );
+                  } else {
+                    // No ad loaded within 10 seconds, dial anyway
+                    _performDial(code);
+                  }
+                }
+              } else if (consent == false) {
+                // User chose "No", don't dial the code
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to dial ${code.code}'),
-                      duration: const Duration(seconds: 2),
-                      backgroundColor: Colors.red,
+                    const SnackBar(
+                      content: Text('Dialing cancelled'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.grey,
                     ),
                   );
                 }
-              } catch (e) {
-                if (!context.mounted) return;
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Error: Unable to make call'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.red,
-                  ),
-                );
               }
+              // If consent is null (dialog dismissed), do nothing
             },
             child: const Text('Dial Code'),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _performDial(USSDCode code) async {
+    try {
+      // Make the direct call
+      bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
+      
+      // Log copy/dial activity
+      await ActivityService.logActivity(
+        type: ActivityType.ussdCodeCopied,
+        title: 'Dialed ${code.name}',
+        description: code.code,
+      );
+      
+      if (!context.mounted) return;
+      
+      if (result == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dialing ${code.code}...'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to dial ${code.code}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: Unable to make call'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _toggleSearchFavorite(USSDCode code) async {
@@ -325,13 +454,25 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
       metadata: {'category': section.name, 'codeCount': section.codes.length},
     );
     
-    // Group codes by provider
-    final Map<String, List<USSDCode>> codesByProvider = {};
+    // Group codes by provider first, then limit codes per provider if premium not active
+    final Map<String, List<USSDCode>> allCodesByProvider = {};
     for (final code in section.codes) {
-      if (!codesByProvider.containsKey(code.provider)) {
-        codesByProvider[code.provider] = [];
+      if (!allCodesByProvider.containsKey(code.provider)) {
+        allCodesByProvider[code.provider] = [];
       }
-      codesByProvider[code.provider]!.add(code);
+      allCodesByProvider[code.provider]!.add(code);
+    }
+    
+    // Limit codes per provider if premium not active
+    final Map<String, List<USSDCode>> codesByProvider = {};
+    if (_isPremiumActive) {
+      codesByProvider.addAll(allCodesByProvider);
+    } else {
+      // Show all providers but limit codes per provider
+      for (final provider in allCodesByProvider.keys) {
+        final providerCodes = allCodesByProvider[provider]!;
+        codesByProvider[provider] = providerCodes.take(4).toList();
+      }
     }
     
     Navigator.push(
@@ -340,6 +481,9 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
         builder: (context) => _SectionDetailsScreen(
           section: section,
           codesByProvider: codesByProvider,
+          isPremiumActive: _isPremiumActive,
+          onPremiumActivated: _checkPremiumStatus,
+          totalCodesCount: section.codes.length,
         ),
       ),
     );
@@ -356,10 +500,16 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
 class _SectionDetailsScreen extends StatefulWidget {
   final USSDSection section;
   final Map<String, List<USSDCode>> codesByProvider;
+  final bool isPremiumActive;
+  final VoidCallback? onPremiumActivated;
+  final int totalCodesCount;
 
   const _SectionDetailsScreen({
     required this.section,
     required this.codesByProvider,
+    required this.isPremiumActive,
+    this.onPremiumActivated,
+    required this.totalCodesCount,
   });
 
   @override
@@ -448,20 +598,162 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
         body: TabBarView(
           children: providers.map((provider) {
             final codes = _codesByProvider[provider]!;
-            return ListView.builder(
+            return SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
-              itemCount: codes.length,
-              itemBuilder: (context, index) {
-                final code = codes[index];
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12.0),
-                  child: USSDCodeCard(
-                    code: code,
-                    onTap: () => _showCodeDetails(context, code),
-                    onFavorite: () => _toggleFavorite(context, code),
-                  ),
-                );
-              },
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // USSD Codes List
+                  ...codes.map((code) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: USSDCodeCard(
+                      code: code,
+                      onTap: () => _showCodeDetails(context, code),
+                      onFavorite: () => _toggleFavorite(context, code),
+                    ),
+                  )),
+                  
+                  // Premium Banner (if not active and showing limited codes)
+                  if (!widget.isPremiumActive && widget.section.codes.length > 4)
+                    Container(
+                      margin: const EdgeInsets.only(top: 16.0),
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.amber.withOpacity(0.2),
+                            Colors.orange.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: const Icon(
+                                  Icons.lock_outline,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12.0),
+                              Expanded(
+                                child: Text(
+                                  'Premium Feature',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8.0),
+                          Text(
+                            'Showing first 4 codes per provider. Unlock all ${widget.section.codes.length} codes with premium!',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.8),
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              // Navigate to settings page using MaterialPageRoute
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(
+                                    scrollToCoins: true,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.settings, size: 18),
+                            label: const Text('Go to Settings'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Hidden Codes Indicator (if not premium and there are more codes)
+                  if (!widget.isPremiumActive && widget.totalCodesCount > codes.length)
+                    Container(
+                      margin: const EdgeInsets.only(top: 16.0),
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: Icon(
+                              Icons.more_horiz,
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12.0),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'More codes below',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4.0),
+                                Text(
+                                  '${widget.totalCodesCount - codes.length} additional codes are hidden',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_downward,
+                            color: theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             );
           }).toList(),
         ),
@@ -477,6 +769,9 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
       description: '${code.provider} - ${code.code}',
       metadata: {'code': code.code, 'provider': code.provider},
     );
+
+    // Show interstitial ad occasionally
+    AdMobService.showInterstitialAdIfReady();
     
     showDialog(
       context: context,
@@ -502,47 +797,97 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
             onPressed: () async {
               Navigator.pop(context);
               
-              // Make the direct call
-              try {
-                bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
-                
-                // Log copy/dial activity
-                await ActivityService.logActivity(
-                  type: ActivityType.ussdCodeCopied,
-                  title: 'Dialed ${code.name}',
-                  description: code.code,
-                );
-                
-                if (!context.mounted) return;
-                
-                if (result == true) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Dialing ${code.code}...'),
-                      duration: const Duration(seconds: 2),
-                      backgroundColor: Colors.green,
-                    ),
+              // Show consent dialog before showing rewarded ad
+              final consent = await RewardedAdConsentDialog.show(
+                context: context,
+                title: 'Dial ${code.name}',
+                description: 'Watch a short advertisement to dial this USSD code and support the app.',
+              );
+
+              if (consent == true) {
+                // User chose "Watch Ad"
+                if (AdMobService.isRewardedAdReady) {
+                  // Ad is ready, show it
+                  AdMobService.showRewardedAd(
+                    onRewarded: (reward) async {
+                      // Reward coins for watching ad
+                      final newBalance = await CoinService.rewardForRewardedAd();
+                      
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                            backgroundColor: Colors.green,
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                      
+                      _performDial(code);
+                    },
                   );
                 } else {
+                  // No ad ready, show loading animation and actively load ads
+                  if (context.mounted) {
+                    LoadingDialog.show(context, 'Preparing...');
+                  }
+                  
+                  // Start loading rewarded ads
+                  AdMobService.loadRewardedAd();
+                  
+                  // Wait for up to 10 seconds for ads to load
+                  bool adLoaded = false;
+                  for (int i = 0; i < 10; i++) {
+                    await Future.delayed(const Duration(seconds: 1));
+                    if (AdMobService.isRewardedAdReady) {
+                      adLoaded = true;
+                      break;
+                    }
+                  }
+                  
+                  // Hide loading dialog
+                  if (context.mounted) {
+                    LoadingDialog.hide(context);
+                  }
+                  
+                  if (adLoaded && context.mounted) {
+                    // Ad loaded within 10 seconds, show it
+                    AdMobService.showRewardedAd(
+                      onRewarded: (reward) async {
+                        // Reward coins for watching ad
+                        final newBalance = await CoinService.rewardForRewardedAd();
+                        
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                        
+                        _performDial(code);
+                      },
+                    );
+                  } else {
+                    // No ad loaded within 10 seconds, dial anyway
+                    _performDial(code);
+                  }
+                }
+              } else if (consent == false) {
+                // User chose "No", don't dial the code
+                if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Failed to dial ${code.code}'),
-                      duration: const Duration(seconds: 2),
-                      backgroundColor: Colors.red,
+                    const SnackBar(
+                      content: Text('Dialing cancelled'),
+                      duration: Duration(seconds: 2),
+                      backgroundColor: Colors.grey,
                     ),
                   );
                 }
-              } catch (e) {
-                if (!context.mounted) return;
-                
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Error: Unable to make call'),
-                    duration: Duration(seconds: 2),
-                    backgroundColor: Colors.red,
-                  ),
-                );
               }
+              // If consent is null (dialog dismissed), do nothing
             },
             child: const Text('Dial Code'),
           ),
@@ -587,5 +932,49 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
         duration: const Duration(seconds: 2),
       ),
     );
+  }
+
+  Future<void> _performDial(USSDCode code) async {
+    try {
+      // Make the direct call
+      bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
+      
+      // Log copy/dial activity
+      await ActivityService.logActivity(
+        type: ActivityType.ussdCodeCopied,
+        title: 'Dialed ${code.name}',
+        description: code.code,
+      );
+      
+      if (!context.mounted) return;
+      
+      if (result == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Dialing ${code.code}...'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to dial ${code.code}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (!context.mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Error: Unable to make call'),
+          duration: Duration(seconds: 2),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }

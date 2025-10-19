@@ -6,9 +6,18 @@ import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/location_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:ussd_plus/widgets/coin_premium_feature_card.dart';
+import 'package:ussd_plus/utils/coin_service.dart';
+import 'package:ussd_plus/utils/premium_features_service.dart';
+import 'package:ussd_plus/widgets/coin_earning_button.dart';
 
 class SettingsScreen extends StatefulWidget {
-  const SettingsScreen({super.key});
+  final bool scrollToCoins;
+  
+  const SettingsScreen({
+    super.key,
+    this.scrollToCoins = false,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -19,22 +28,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? _detectedCountry;
   bool _autoDetectEnabled = true;
   bool _isDetecting = false;
+  int _coinBalance = 0;
+  final ScrollController _scrollController = ScrollController();
   
+  final GlobalKey _coinsSectionKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
     _loadSettings();
+    
+    // Scroll to coins section if requested
+    if (widget.scrollToCoins) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToCoinsSection();
+      });
+    }
+  }
+
+  void _scrollToCoinsSection() {
+    // Try multiple approaches to ensure scrolling works
+    Future.delayed(const Duration(milliseconds: 300), () {
+      if (_scrollController.hasClients) {
+        // First try: Calculate approximate position
+        const double estimatedPosition = 600.0;
+        
+        _scrollController.animateTo(
+          estimatedPosition.clamp(0.0, _scrollController.position.maxScrollExtent),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+    
+    // Second try: Use ensureVisible with longer delay
+    Future.delayed(const Duration(milliseconds: 800), () {
+      if (_coinsSectionKey.currentContext != null) {
+        Scrollable.ensureVisible(
+          _coinsSectionKey.currentContext!,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+          alignment: 0.1, // Position near top of screen
+        );
+      }
+    });
   }
   
   Future<void> _loadSettings() async {
     final country = await USSDDataService.getSelectedCountry();
     final autoDetect = await LocationService.isAutoDetectEnabled();
     final detected = await LocationService.getDetectedCountry();
+    final coins = await CoinService.getCoinBalance();
     
     setState(() {
       _selectedCountry = country;
       _autoDetectEnabled = autoDetect;
       _detectedCountry = detected;
+      _coinBalance = coins;
     });
   }
   
@@ -101,6 +151,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         title: const Text('Settings'),
       ),
       body: ListView(
+        controller: _scrollController,
         padding: const EdgeInsets.only(left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
         children: [
           // App Settings
@@ -224,26 +275,61 @@ class _SettingsScreenState extends State<SettingsScreen> {
           
           const SizedBox(height: 24.0),
           
+          // Coin Balance
+          Container(
+            key: _coinsSectionKey,
+            child: _buildCoinBalanceSection(),
+          ),
+          
+          // Coin Earning Button
+          CoinEarningButton(
+            onCoinsEarned: _loadSettings,
+          ),
+          
+          const SizedBox(height: 24.0),
+          
           // Premium Features
           _buildSectionHeader('Premium Features'),
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.secondary,
-                ],
-              ),
-              borderRadius: BorderRadius.circular(12.0),
-            ),
-            child: _buildSettingsTile(
-              icon: Icons.star,
-              title: 'Upgrade to Pro',
-              subtitle: 'Unlock advanced AI features',
-              onTap: () => _showPremiumUpgrade(context),
-              textColor: Colors.white,
-            ),
+          
+          // Remove Ads (1 Week)
+          CoinPremiumFeatureCard(
+            feature: PremiumFeature.removeAdsWeek,
+            onFeatureActivated: _loadSettings,
           ),
+          
+          const SizedBox(height: 12.0),
+          
+          // Remove Ads (1 Month)
+          CoinPremiumFeatureCard(
+            feature: PremiumFeature.removeAdsMonth,
+            onFeatureActivated: _loadSettings,
+          ),
+          
+          const SizedBox(height: 12.0),
+          
+          // Show All SMS (1 Week)
+          CoinPremiumFeatureCard(
+            feature: PremiumFeature.showAllSMSWeek,
+            onFeatureActivated: _loadSettings,
+          ),
+          
+          const SizedBox(height: 12.0),
+          
+          // Remove from Favorites (1 Week)
+          CoinPremiumFeatureCard(
+            feature: PremiumFeature.removeFavoritesWeek,
+            onFeatureActivated: _loadSettings,
+          ),
+          
+          const SizedBox(height: 12.0),
+          
+          // Show All Codes (1 Week)
+          CoinPremiumFeatureCard(
+            feature: PremiumFeature.showAllCodesWeek,
+            onFeatureActivated: _loadSettings,
+          ),
+          
+          const SizedBox(height: 12.0),
         ],
       ),
     );
@@ -258,6 +344,80 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontSize: 16,
           fontWeight: FontWeight.bold,
           color: Colors.grey[400],
+        ),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildCoinBalanceSection() {
+    final theme = Theme.of(context);
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8.0),
+      color: theme.colorScheme.surface,
+      child: Container(
+        padding: const EdgeInsets.all(16.0),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Colors.amber.withOpacity(0.2),
+              Colors.orange.withOpacity(0.1),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(12.0),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                color: Colors.amber.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(12.0),
+              ),
+              child: const Icon(
+                Icons.monetization_on,
+                color: Colors.amber,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16.0),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Coin Balance',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 4.0),
+                  Text(
+                    '$_coinBalance coins available',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: Colors.amber,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4.0),
+                  Text(
+                    'Watch ads to earn more coins and unlock premium features',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -472,19 +632,4 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showPremiumUpgrade(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Upgrade to Pro'),
-        content: const Text('Premium features will be available in future updates.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
 }

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/activity_model.dart';
+import 'notification_service.dart';
 
 class ActivityService {
   static const String _activitiesKey = 'user_activities';
@@ -36,6 +37,9 @@ class ActivityService {
       // Save to preferences
       final jsonList = activities.map((a) => a.toMap()).toList();
       await prefs.setString(_activitiesKey, json.encode(jsonList));
+
+      // Send notifications for specific activity types
+      await _sendNotificationForActivity(newActivity);
     } catch (e) {
       print('Error logging activity: $e');
     }
@@ -114,6 +118,42 @@ class ActivityService {
         timestamp: now.subtract(const Duration(days: 1)),
       ),
     ];
+  }
+
+  static Future<void> _sendNotificationForActivity(Activity activity) async {
+    try {
+      switch (activity.type) {
+        case ActivityType.ussdCodeViewed:
+          // Extract USSD code from title if possible
+          final ussdCode = activity.metadata?['ussdCode'] ?? 'USSD Code';
+          await NotificationService.showUSSDNotification(
+            code: ussdCode,
+            description: activity.description ?? 'USSD code viewed',
+          );
+          break;
+        case ActivityType.smsAnalyzed:
+          final messageCount = activity.metadata?['messageCount'] ?? 0;
+          final totalCost = activity.metadata?['totalCost'] ?? 0.0;
+          await NotificationService.showSMSAnalysisNotification(
+            messageCount: messageCount,
+            totalCost: totalCost,
+          );
+          break;
+        case ActivityType.settingsChanged:
+          if (activity.title.toLowerCase().contains('country')) {
+            final country = activity.metadata?['country'] ?? 'Unknown';
+            await NotificationService.showCountryDetectedNotification(
+              country: country,
+            );
+          }
+          break;
+        default:
+          // No notification for other activity types
+          break;
+      }
+    } catch (e) {
+      print('Error sending notification: $e');
+    }
   }
 }
 

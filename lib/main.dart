@@ -10,6 +10,8 @@ import 'package:ussd_plus/models/sms_model.dart';
 import 'package:ussd_plus/utils/admob_service.dart';
 import 'package:ussd_plus/utils/location_service.dart';
 import 'package:ussd_plus/utils/onboarding_service.dart';
+import 'package:ussd_plus/utils/notification_service.dart';
+import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -36,6 +38,12 @@ void main() async {
   
   // Initialize AdMob
   await AdMobService.initialize();
+  
+  // Initialize timezone
+  tz.initializeTimeZones();
+  
+  // Initialize Notifications
+  await NotificationService.initialize();
   
   runApp(const USSDPlusApp());
 }
@@ -84,8 +92,32 @@ Future<void> _initializeLocationAndDetectCountry() async {
   }
 }
 
-class USSDPlusApp extends StatelessWidget {
+class USSDPlusApp extends StatefulWidget {
   const USSDPlusApp({super.key});
+
+  @override
+  State<USSDPlusApp> createState() => _USSDPlusAppState();
+}
+
+class _USSDPlusAppState extends State<USSDPlusApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // App open ads disabled - no ads shown on foreground
+  }
 
   @override
   Widget build(BuildContext context) {

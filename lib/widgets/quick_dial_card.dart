@@ -5,6 +5,10 @@ import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/theme/theme_generator.dart';
+import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
+import 'package:ussd_plus/widgets/loading_dialog.dart';
+import 'package:ussd_plus/utils/coin_service.dart';
 class QuickDialCard extends StatefulWidget {
   const QuickDialCard({super.key});
 
@@ -87,6 +91,100 @@ class _QuickDialCardState extends State<QuickDialCard> {
   }
 
   Future<void> _dialCode(USSDCode code) async {
+    // Show consent dialog before showing rewarded ad
+    final consent = await RewardedAdConsentDialog.show(
+      context: context,
+      title: 'Dial ${code.name}',
+      description: 'Watch a short advertisement to dial this USSD code and support the app.',
+    );
+
+    if (consent == true) {
+      // User chose "Watch Ad"
+      if (AdMobService.isRewardedAdReady) {
+        // Ad is ready, show it
+        AdMobService.showRewardedAd(
+          onRewarded: (reward) async {
+            // Reward coins for watching ad
+            final newBalance = await CoinService.rewardForRewardedAd();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+            
+            _performDial(code);
+          },
+        );
+                } else {
+                  // No ad ready, show loading animation and actively load ads
+                  if (mounted) {
+                    LoadingDialog.show(context, 'Preparing...');
+                  }
+                  
+                  // Start loading rewarded ads
+                  AdMobService.loadRewardedAd();
+                  
+                  // Wait for up to 10 seconds for ads to load
+                  bool adLoaded = false;
+                  for (int i = 0; i < 10; i++) {
+                    await Future.delayed(const Duration(seconds: 1));
+                    if (AdMobService.isRewardedAdReady) {
+                      adLoaded = true;
+                      break;
+                    }
+                  }
+                  
+                  // Hide loading dialog
+                  if (mounted) {
+                    LoadingDialog.hide(context);
+                  }
+                  
+                  if (adLoaded && mounted) {
+                    // Ad loaded within 10 seconds, show it
+                    AdMobService.showRewardedAd(
+                      onRewarded: (reward) async {
+                        // Reward coins for watching ad
+                        final newBalance = await CoinService.rewardForRewardedAd();
+                        
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                              backgroundColor: Colors.green,
+                              duration: const Duration(seconds: 2),
+                            ),
+                          );
+                        }
+                        
+                        _performDial(code);
+                      },
+                    );
+                  } else {
+                    // No ad loaded within 10 seconds, dial anyway
+                    _performDial(code);
+                  }
+                }
+    } else if (consent == false) {
+      // User chose "No", don't dial the code
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Dialing cancelled'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.grey,
+          ),
+        );
+      }
+    }
+    // If consent is null (dialog dismissed), do nothing
+  }
+
+  Future<void> _performDial(USSDCode code) async {
     try {
       // Make the direct call
       bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);

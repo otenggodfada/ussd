@@ -7,8 +7,10 @@ import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/utils/sms_analyzer.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/widgets/sms_category_card.dart';
-import 'package:ussd_plus/widgets/cost_summary_card.dart';
 import 'package:ussd_plus/widgets/sms_message_card.dart';
+import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/utils/premium_features_service.dart';
+import 'package:ussd_plus/screens/settings_screen.dart';
 
 class SMSInsightsScreen extends StatefulWidget {
   const SMSInsightsScreen({super.key});
@@ -21,11 +23,28 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   List<SMSMessage> _messages = [];
   SMSCostSummary? _costSummary;
   bool _isLoading = true;
+  bool _isPremiumActive = false;
 
   @override
   void initState() {
     super.initState();
     _loadSMSData();
+    _checkPremiumStatus();
+    _showInterstitialAdIfReady();
+  }
+
+  Future<void> _checkPremiumStatus() async {
+    final isActive = await PremiumFeaturesService.isFeatureActive(PremiumFeature.showAllSMSWeek);
+    setState(() {
+      _isPremiumActive = isActive;
+    });
+  }
+
+  void _showInterstitialAdIfReady() {
+    // Show interstitial ad when entering SMS insights
+    Future.delayed(const Duration(seconds: 1), () {
+      AdMobService.showInterstitialAdIfReady();
+    });
   }
 
   void _loadSMSData() async {
@@ -451,7 +470,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Cost Summary
+                  // Hero Section - Cost Summary
                   if (_costSummary != null)
                     GestureDetector(
                       onTap: () {
@@ -468,7 +487,317 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                           },
                         );
                       },
-                      child: CostSummaryCard(costSummary: _costSummary!),
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 24.0),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              theme.colorScheme.primary.withOpacity(0.1),
+                              theme.colorScheme.secondary.withOpacity(0.05),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20.0),
+                          border: Border.all(
+                            color: theme.colorScheme.primary.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              blurRadius: 20,
+                              offset: const Offset(0, 8),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Header
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(12.0),
+                                        decoration: BoxDecoration(
+                                          gradient: LinearGradient(
+                                            colors: [
+                                              theme.colorScheme.primary,
+                                              theme.colorScheme.primary.withOpacity(0.8),
+                                            ],
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                          ),
+                                          borderRadius: BorderRadius.circular(16.0),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: theme.colorScheme.primary.withOpacity(0.3),
+                                              blurRadius: 8,
+                                              offset: const Offset(0, 4),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Icon(
+                                          Icons.analytics_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16.0),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'SMS Insights',
+                                              style: theme.textTheme.headlineSmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: theme.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            Text(
+                                              'Financial overview from your messages',
+                                              style: theme.textTheme.bodyMedium?.copyWith(
+                                                color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16.0),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(20.0),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          Icons.sms_rounded,
+                                          color: theme.colorScheme.primary,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8.0),
+                                        Text(
+                                          '${_costSummary!.totalMessages} messages analyzed',
+                                          style: TextStyle(
+                                            color: theme.colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 14,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              
+                              const SizedBox(height: 24.0),
+                              
+                              // Stats Grid
+                              Column(
+                                children: [
+                                  // Total Cost - Full Row
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      border: Border.all(
+                                        color: Colors.red.withOpacity(0.2),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.attach_money_rounded,
+                                              color: Colors.red,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8.0),
+                                            Text(
+                                              'Total Cost',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: Colors.red,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8.0),
+                                        Text(
+                                          'GHS ${_costSummary!.totalCost.toStringAsFixed(2)}',
+                                          style: theme.textTheme.titleLarge?.copyWith(
+                                            color: Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  
+                                  const SizedBox(height: 12.0),
+                                  
+                                  // Expenses and Revenue - Row
+                                  Row(
+                                    children: [
+                                      // Total Expenses
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16.0),
+                                          decoration: BoxDecoration(
+                                            color: Colors.orange.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(16.0),
+                                            border: Border.all(
+                                              color: Colors.orange.withOpacity(0.2),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.trending_down_rounded,
+                                                    color: Colors.orange,
+                                                    size: 20,
+                                                  ),
+                                                  const SizedBox(width: 8.0),
+                                                  Text(
+                                                    'Expenses',
+                                                    style: theme.textTheme.bodySmall?.copyWith(
+                                                      color: Colors.orange,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8.0),
+                                              Text(
+                                                'GHS ${_costSummary!.totalExpenses.toStringAsFixed(2)}',
+                                                style: theme.textTheme.titleLarge?.copyWith(
+                                                  color: Colors.orange,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                      
+                                      const SizedBox(width: 12.0),
+                                      
+                                      // Total Revenue
+                                      Expanded(
+                                        child: Container(
+                                          padding: const EdgeInsets.all(16.0),
+                                          decoration: BoxDecoration(
+                                            color: Colors.green.withOpacity(0.1),
+                                            borderRadius: BorderRadius.circular(16.0),
+                                            border: Border.all(
+                                              color: Colors.green.withOpacity(0.2),
+                                            ),
+                                          ),
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                children: [
+                                                  Icon(
+                                                    Icons.trending_up_rounded,
+                                                    color: Colors.green,
+                                                    size: 20,
+                                                  ),
+                                                  const SizedBox(width: 8.0),
+                                                  Text(
+                                                    'Revenue',
+                                                    style: theme.textTheme.bodySmall?.copyWith(
+                                                      color: Colors.green,
+                                                      fontWeight: FontWeight.w600,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 8.0),
+                                              Text(
+                                                'GHS ${_costSummary!.totalRevenue.toStringAsFixed(2)}',
+                                                style: theme.textTheme.titleLarge?.copyWith(
+                                                  color: Colors.green,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  
+                                  const SizedBox(height: 12.0),
+                                  
+                                  // Net Balance - Full Row
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(16.0),
+                                    decoration: BoxDecoration(
+                                      color: theme.colorScheme.primary.withOpacity(0.1),
+                                      borderRadius: BorderRadius.circular(16.0),
+                                      border: Border.all(
+                                        color: theme.colorScheme.primary.withOpacity(0.2),
+                                      ),
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Icon(
+                                              Icons.account_balance_wallet_rounded,
+                                              color: theme.colorScheme.primary,
+                                              size: 20,
+                                            ),
+                                            const SizedBox(width: 8.0),
+                                            Text(
+                                              'Net Balance',
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                color: theme.colorScheme.primary,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8.0),
+                                        Text(
+                                          'GHS ${(_costSummary!.totalRevenue - _costSummary!.totalExpenses).toStringAsFixed(2)}',
+                                          style: theme.textTheme.titleLarge?.copyWith(
+                                            color: (_costSummary!.totalRevenue - _costSummary!.totalExpenses) >= 0 
+                                                ? Colors.green 
+                                                : Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   
                   const SizedBox(height: 32.0),
@@ -499,7 +828,8 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                   ),
                   const SizedBox(height: 16.0),
                   
-                  ...SMSCategory.values.map((category) {
+                  // Show limited categories for non-premium users
+                  ...(_isPremiumActive ? SMSCategory.values : SMSCategory.values.take(4)).map((category) {
                     final count = _costSummary?.getMessageCountForCategory(category) ?? 0;
                     final cost = _costSummary?.getCostForCategory(category) ?? 0.0;
                     final expenses = _costSummary?.getExpenseForCategory(category) ?? 0.0;
@@ -517,6 +847,145 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                       ),
                     );
                   }),
+                  
+                  // Premium Banner (if not active and there are more categories)
+                  if (!_isPremiumActive && SMSCategory.values.length > 4)
+                    Container(
+                      margin: const EdgeInsets.only(top: 16.0, bottom: 16.0),
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.amber.withOpacity(0.2),
+                            Colors.orange.withOpacity(0.1),
+                          ],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: Colors.amber.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.amber.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: const Icon(
+                                  Icons.lock_outline,
+                                  color: Colors.amber,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12.0),
+                              Expanded(
+                                child: Text(
+                                  'Premium Feature',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    color: Colors.amber,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8.0),
+                          Text(
+                            'Showing first 4 categories. Unlock all ${SMSCategory.values.length} categories with premium!',
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: theme.colorScheme.onSurface.withOpacity(0.8),
+                            ),
+                          ),
+                          const SizedBox(height: 12.0),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              // Navigate to settings page
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const SettingsScreen(
+                                    scrollToCoins: true,
+                                  ),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.settings, size: 18),
+                            label: const Text('Go to Settings'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.amber,
+                              foregroundColor: Colors.black,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  
+                  // Hidden Categories Indicator (if not premium and there are more categories)
+                  if (!_isPremiumActive && SMSCategory.values.length > 4)
+                    Container(
+                      margin: const EdgeInsets.only(top: 16.0),
+                      padding: const EdgeInsets.all(16.0),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(12.0),
+                        border: Border.all(
+                          color: theme.colorScheme.outline.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8.0),
+                            decoration: BoxDecoration(
+                              color: theme.colorScheme.primary.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(8.0),
+                            ),
+                            child: Icon(
+                              Icons.more_horiz,
+                              color: theme.colorScheme.primary,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12.0),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'More categories below',
+                                  style: theme.textTheme.titleSmall?.copyWith(
+                                    color: theme.colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 4.0),
+                                Text(
+                                  '${SMSCategory.values.length - 4} additional categories are hidden',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          Icon(
+                            Icons.arrow_downward,
+                            color: theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
                   
                   const SizedBox(height: 32.0),
                   

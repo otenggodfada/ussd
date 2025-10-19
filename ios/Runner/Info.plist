@@ -108,5 +108,9 @@
 	<!-- Microphone Permission (if needed for voice features) -->
 	<key>NSMicrophoneUsageDescription</key>
 	<string>USSD+ needs microphone access for voice-activated USSD code dialing.</string>
+	
+	<!-- AdMob App ID -->
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-8528924538237596~9268611851</string>
 </dict>
 </plist>
