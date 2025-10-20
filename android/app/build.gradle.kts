@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.redizeuz.ussd_plus"
+    namespace = "com.redizeuz.ussdplus"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         // Application ID for USSD+ app
-        applicationId = "com.redizeuz.ussd_plus"
+        applicationId = "com.redizeuz.ussdplus"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
