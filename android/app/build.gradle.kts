@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.redizeuz.snoreff"
+        applicationId = "com.redizeuz.ussdplus"
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
