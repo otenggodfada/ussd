@@ -6,6 +6,8 @@ import 'package:ussd_plus/models/sms_model.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/utils/sms_analyzer.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
+import 'package:ussd_plus/utils/country_config_service.dart';
+import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/widgets/sms_category_card.dart';
 import 'package:ussd_plus/widgets/sms_message_card.dart';
 import 'package:ussd_plus/utils/admob_service.dart';
@@ -24,13 +26,25 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   SMSCostSummary? _costSummary;
   bool _isLoading = true;
   bool _isPremiumActive = false;
+  String _selectedCountry = 'Ghana';
+  CountryConfig? _countryConfig;
 
   @override
   void initState() {
     super.initState();
+    _loadCountryConfig();
     _loadSMSData();
     _checkPremiumStatus();
     _showInterstitialAdIfReady();
+  }
+
+  Future<void> _loadCountryConfig() async {
+    final country = await USSDDataService.getSelectedCountry();
+    final config = CountryConfigService.getCountryConfig(country);
+    setState(() {
+      _selectedCountry = country;
+      _countryConfig = config;
+    });
   }
 
   Future<void> _checkPremiumStatus() async {
@@ -57,6 +71,8 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
       
       if (Platform.isAndroid) {
         messages = await _readSMSFromDevice();
+        // Convert all SMS to use selected country's context
+        messages = _convertSMSToCountryContext(messages);
       } else {
         // For iOS or other platforms, show sample data
         messages = _generateSampleMessages();
@@ -68,18 +84,18 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
         _isLoading = false;
       });
       
-      // Log SMS analysis activity
-      if (messages.isNotEmpty) {
-        await ActivityService.logActivity(
-          type: ActivityType.smsAnalyzed,
-          title: 'Analyzed ${messages.length} SMS messages',
-          description: 'Total cost: GHS ${_costSummary?.totalCost.toStringAsFixed(2) ?? '0.00'}',
-          metadata: {'messageCount': messages.length, 'totalCost': _costSummary?.totalCost},
-        );
-      }
+        // Log SMS analysis activity
+        if (messages.isNotEmpty) {
+          await ActivityService.logActivity(
+            type: ActivityType.smsAnalyzed,
+            title: 'Analyzed ${messages.length} SMS messages',
+            description: 'Total cost: ${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary?.totalCost.toStringAsFixed(2) ?? '0.00'}',
+            metadata: {'messageCount': messages.length, 'totalCost': _costSummary?.totalCost},
+          );
+        }
     } catch (e) {
       setState(() {
-        _messages = _generateSampleMessages();
+        _messages = _generateSampleMessages(); // This already uses selected country
         _costSummary = _calculateCostSummary(_messages);
         _isLoading = false;
       });
@@ -111,9 +127,9 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
           int.parse(smsMap['date'] ?? '0')
         );
         
-        final category = SMSAnalyzer.categorizeMessage(content);
-        final provider = SMSAnalyzer.detectProvider(content, sender);
-        final cost = SMSAnalyzer.calculateCost(content, provider);
+        final category = SMSAnalyzer.categorizeMessage(content, country: _selectedCountry);
+        final provider = SMSAnalyzer.detectProvider(content, sender, country: _selectedCountry);
+        final cost = SMSAnalyzer.calculateCost(content, provider, country: _selectedCountry);
         
         return SMSMessage(
           id: smsMap['_id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
@@ -131,55 +147,314 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     }
   }
 
+  List<SMSMessage> _convertSMSToCountryContext(List<SMSMessage> messages) {
+    // Convert all SMS messages to use the selected country's context
+    return messages.map((message) {
+      // Re-analyze the message using the selected country's patterns
+      final category = SMSAnalyzer.categorizeMessage(message.content, country: _selectedCountry);
+      final provider = SMSAnalyzer.detectProvider(message.content, message.sender, country: _selectedCountry);
+      final cost = SMSAnalyzer.calculateCost(message.content, provider, country: _selectedCountry);
+      
+      // Convert the SMS content to use selected country's currency
+      final convertedContent = _convertContentToCountryCurrency(message.content);
+      
+      return SMSMessage(
+        id: message.id,
+        sender: provider, // Use the country-specific provider instead of original sender
+        content: convertedContent, // Use converted content with selected country's currency
+        timestamp: message.timestamp,
+        category: category,
+        cost: cost,
+        provider: provider,
+      );
+    }).toList();
+  }
+
+  String _convertContentToCountryCurrency(String content) {
+    final config = _countryConfig ?? CountryConfigService.getCountryConfig(_selectedCountry);
+    final targetCurrency = config.currencySymbol;
+    
+    // Convert common currency patterns to selected country's currency
+    String convertedContent = content;
+    
+    // Convert GHS to target currency
+    convertedContent = convertedContent.replaceAll(RegExp(r'GHS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert NGN to target currency
+    convertedContent = convertedContent.replaceAll(RegExp(r'NGN\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert KES to target currency
+    convertedContent = convertedContent.replaceAll(RegExp(r'KES\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert USD to target currency
+    convertedContent = convertedContent.replaceAll(RegExp(r'USD\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert INR to target currency
+    convertedContent = convertedContent.replaceAll(RegExp(r'INR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert other currencies
+    convertedContent = convertedContent.replaceAll(RegExp(r'TZS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    convertedContent = convertedContent.replaceAll(RegExp(r'UGX\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    convertedContent = convertedContent.replaceAll(RegExp(r'ZAR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    convertedContent = convertedContent.replaceAll(RegExp(r'RWF\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    // Convert currency symbols
+    convertedContent = convertedContent.replaceAll(RegExp(r'\$(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    convertedContent = convertedContent.replaceAll(RegExp(r'₹(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    
+    return convertedContent;
+  }
+
   List<SMSMessage> _generateSampleMessages() {
     final now = DateTime.now();
-    return [
-      SMSMessage(
-        id: '1',
-        sender: 'MTN',
-        content: 'Your airtime balance is GHS 15.50. Valid until 2024-01-15',
-        timestamp: now.subtract(const Duration(hours: 2)),
-        category: SMSCategory.telecom,
-        cost: 0.05,
-        provider: 'MTN',
-      ),
-      SMSMessage(
-        id: '2',
-        sender: 'GCB Bank',
-        content: 'Transaction Alert: GHS 500.00 debited from your account. Balance: GHS 2,450.00',
-        timestamp: now.subtract(const Duration(hours: 4)),
-        category: SMSCategory.banking,
-        cost: 0.05,
-        provider: 'GCB Bank',
-      ),
-      SMSMessage(
-        id: '3',
-        sender: 'ECG',
-        content: 'Your electricity bill of GHS 120.50 is due on 2024-01-20. Pay via *713*33#',
-        timestamp: now.subtract(const Duration(days: 1)),
-        category: SMSCategory.utilities,
-        cost: 0.05,
-        provider: 'ECG',
-      ),
-      SMSMessage(
-        id: '4',
-        sender: 'MTN Mobile Money',
-        content: 'You received GHS 100.00 from John Doe. New balance: GHS 250.00',
-        timestamp: now.subtract(const Duration(days: 2)),
-        category: SMSCategory.mobileMoney,
-        cost: 0.05,
-        provider: 'MTN',
-      ),
-      SMSMessage(
-        id: '5',
-        sender: 'Vodafone',
-        content: 'Special offer! Get 2GB data for GHS 10. Valid for 7 days. Dial *110*2#',
-        timestamp: now.subtract(const Duration(days: 3)),
-        category: SMSCategory.promotional,
-        cost: 0.05,
-        provider: 'Vodafone',
-      ),
-    ];
+    
+    // ALWAYS generate sample data for the selected country, regardless of actual SMS content
+    switch (_selectedCountry) {
+      case 'Nigeria':
+        return [
+          SMSMessage(
+            id: '1',
+            sender: 'MTN',
+            content: 'Your airtime balance is NGN 1,500.00. Valid until 2024-01-15',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            category: SMSCategory.telecom,
+            cost: 4.0,
+            provider: 'MTN',
+          ),
+          SMSMessage(
+            id: '2',
+            sender: 'GTBank',
+            content: 'Transaction Alert: NGN 50,000.00 debited from your account. Balance: NGN 245,000.00',
+            timestamp: now.subtract(const Duration(hours: 4)),
+            category: SMSCategory.banking,
+            cost: 4.0,
+            provider: 'GTBank',
+          ),
+          SMSMessage(
+            id: '3',
+            sender: 'EKEDC',
+            content: 'Your electricity bill of NGN 12,050.00 is due on 2024-01-20. Pay via *737#',
+            timestamp: now.subtract(const Duration(days: 1)),
+            category: SMSCategory.utilities,
+            cost: 4.0,
+            provider: 'EKEDC',
+          ),
+          SMSMessage(
+            id: '4',
+            sender: 'OPay',
+            content: 'You received NGN 10,000.00 from John Doe. New balance: NGN 25,000.00',
+            timestamp: now.subtract(const Duration(days: 2)),
+            category: SMSCategory.mobileMoney,
+            cost: 4.0,
+            provider: 'OPay',
+          ),
+          SMSMessage(
+            id: '5',
+            sender: 'Airtel',
+            content: 'Special offer! Get 2GB data for NGN 1,000. Valid for 7 days. Dial *141#',
+            timestamp: now.subtract(const Duration(days: 3)),
+            category: SMSCategory.promotional,
+            cost: 4.0,
+            provider: 'Airtel',
+          ),
+        ];
+        
+      case 'Kenya':
+        return [
+          SMSMessage(
+            id: '1',
+            sender: 'Safaricom',
+            content: 'Your airtime balance is KES 150.00. Valid until 2024-01-15',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            category: SMSCategory.telecom,
+            cost: 1.0,
+            provider: 'Safaricom',
+          ),
+          SMSMessage(
+            id: '2',
+            sender: 'Equity Bank',
+            content: 'Transaction Alert: KES 5,000.00 debited from your account. Balance: KES 24,500.00',
+            timestamp: now.subtract(const Duration(hours: 4)),
+            category: SMSCategory.banking,
+            cost: 1.0,
+            provider: 'Equity Bank',
+          ),
+          SMSMessage(
+            id: '3',
+            sender: 'Kenya Power',
+            content: 'Your electricity bill of KES 1,205.00 is due on 2024-01-20. Pay via M-Pesa',
+            timestamp: now.subtract(const Duration(days: 1)),
+            category: SMSCategory.utilities,
+            cost: 1.0,
+            provider: 'Kenya Power',
+          ),
+          SMSMessage(
+            id: '4',
+            sender: 'M-Pesa',
+            content: 'You received KES 1,000.00 from John Doe. New balance: KES 2,500.00',
+            timestamp: now.subtract(const Duration(days: 2)),
+            category: SMSCategory.mobileMoney,
+            cost: 1.0,
+            provider: 'M-Pesa',
+          ),
+          SMSMessage(
+            id: '5',
+            sender: 'Airtel',
+            content: 'Special offer! Get 2GB data for KES 100. Valid for 7 days. Dial *544#',
+            timestamp: now.subtract(const Duration(days: 3)),
+            category: SMSCategory.promotional,
+            cost: 1.0,
+            provider: 'Airtel',
+          ),
+        ];
+        
+      case 'USA':
+        return [
+          SMSMessage(
+            id: '1',
+            sender: 'AT&T',
+            content: 'Your account balance is \$45.50. Data remaining: 2.3GB',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            category: SMSCategory.telecom,
+            cost: 0.10,
+            provider: 'AT&T',
+          ),
+          SMSMessage(
+            id: '2',
+            sender: 'Chase Bank',
+            content: 'Transaction Alert: \$500.00 debited from your account. Balance: \$2,450.00',
+            timestamp: now.subtract(const Duration(hours: 4)),
+            category: SMSCategory.banking,
+            cost: 0.10,
+            provider: 'Chase Bank',
+          ),
+          SMSMessage(
+            id: '3',
+            sender: 'ConEd',
+            content: 'Your electricity bill of \$120.50 is due on 2024-01-20. Pay online',
+            timestamp: now.subtract(const Duration(days: 1)),
+            category: SMSCategory.utilities,
+            cost: 0.10,
+            provider: 'ConEd',
+          ),
+          SMSMessage(
+            id: '4',
+            sender: 'Venmo',
+            content: 'You received \$100.00 from John Doe. New balance: \$250.00',
+            timestamp: now.subtract(const Duration(days: 2)),
+            category: SMSCategory.mobileMoney,
+            cost: 0.10,
+            provider: 'Venmo',
+          ),
+          SMSMessage(
+            id: '5',
+            sender: 'T-Mobile',
+            content: 'Special offer! Get unlimited data for \$50/month. Valid for 7 days',
+            timestamp: now.subtract(const Duration(days: 3)),
+            category: SMSCategory.promotional,
+            cost: 0.10,
+            provider: 'T-Mobile',
+          ),
+        ];
+        
+      case 'India':
+        return [
+          SMSMessage(
+            id: '1',
+            sender: 'Airtel',
+            content: 'Your airtime balance is ₹150.00. Data remaining: 2.3GB',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            category: SMSCategory.telecom,
+            cost: 0.15,
+            provider: 'Airtel',
+          ),
+          SMSMessage(
+            id: '2',
+            sender: 'SBI',
+            content: 'Transaction Alert: ₹5,000.00 debited from your account. Balance: ₹24,500.00',
+            timestamp: now.subtract(const Duration(hours: 4)),
+            category: SMSCategory.banking,
+            cost: 0.15,
+            provider: 'SBI',
+          ),
+          SMSMessage(
+            id: '3',
+            sender: 'BSES',
+            content: 'Your electricity bill of ₹1,205.00 is due on 2024-01-20. Pay via UPI',
+            timestamp: now.subtract(const Duration(days: 1)),
+            category: SMSCategory.utilities,
+            cost: 0.15,
+            provider: 'BSES',
+          ),
+          SMSMessage(
+            id: '4',
+            sender: 'Paytm',
+            content: 'You received ₹1,000.00 from John Doe. New balance: ₹2,500.00',
+            timestamp: now.subtract(const Duration(days: 2)),
+            category: SMSCategory.mobileMoney,
+            cost: 0.15,
+            provider: 'Paytm',
+          ),
+          SMSMessage(
+            id: '5',
+            sender: 'Jio',
+            content: 'Special offer! Get 2GB data for ₹100. Valid for 7 days',
+            timestamp: now.subtract(const Duration(days: 3)),
+            category: SMSCategory.promotional,
+            cost: 0.15,
+            provider: 'Jio',
+          ),
+        ];
+        
+      default: // Ghana and others
+        return [
+          SMSMessage(
+            id: '1',
+            sender: 'MTN',
+            content: 'Your airtime balance is GHS 15.50. Valid until 2024-01-15',
+            timestamp: now.subtract(const Duration(hours: 2)),
+            category: SMSCategory.telecom,
+            cost: 0.05,
+            provider: 'MTN',
+          ),
+          SMSMessage(
+            id: '2',
+            sender: 'GCB Bank',
+            content: 'Transaction Alert: GHS 500.00 debited from your account. Balance: GHS 2,450.00',
+            timestamp: now.subtract(const Duration(hours: 4)),
+            category: SMSCategory.banking,
+            cost: 0.05,
+            provider: 'GCB Bank',
+          ),
+          SMSMessage(
+            id: '3',
+            sender: 'ECG',
+            content: 'Your electricity bill of GHS 120.50 is due on 2024-01-20. Pay via *713*33#',
+            timestamp: now.subtract(const Duration(days: 1)),
+            category: SMSCategory.utilities,
+            cost: 0.05,
+            provider: 'ECG',
+          ),
+          SMSMessage(
+            id: '4',
+            sender: 'MTN Mobile Money',
+            content: 'You received GHS 100.00 from John Doe. New balance: GHS 250.00',
+            timestamp: now.subtract(const Duration(days: 2)),
+            category: SMSCategory.mobileMoney,
+            cost: 0.05,
+            provider: 'MTN',
+          ),
+          SMSMessage(
+            id: '5',
+            sender: 'Vodafone',
+            content: 'Special offer! Get 2GB data for GHS 10. Valid for 7 days. Dial *110*2#',
+            timestamp: now.subtract(const Duration(days: 3)),
+            category: SMSCategory.promotional,
+            cost: 0.05,
+            provider: 'Vodafone',
+          ),
+        ];
+    }
   }
 
   SMSCostSummary _calculateCostSummary(List<SMSMessage> messages) {
@@ -228,20 +503,65 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   }
 
   double _extractAmountFromMessage(String content) {
-    // Look for GHS amounts in the message
-    final ghsPattern = RegExp(r'GHS\s*(\d+(?:\.\d{2})?)', caseSensitive: false);
-    final match = ghsPattern.firstMatch(content);
+    // Look for currency symbol amounts in the message (like $, ₹)
+    final symbolPattern = RegExp(r'\$(\d+(?:\.\d{2})?)', caseSensitive: false);
+    final symbolMatch = symbolPattern.firstMatch(content);
     
-    if (match != null) {
-      return double.tryParse(match.group(1) ?? '0') ?? 0.0;
+    if (symbolMatch != null) {
+      return double.tryParse(symbolMatch.group(1) ?? '0') ?? 0.0;
     }
     
-    // Look for other currency patterns
-    final currencyPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:cedis?|ghs)', caseSensitive: false);
-    final currencyMatch = currencyPattern.firstMatch(content);
+    // Look for generic currency patterns and convert to selected country's currency
+    // This ensures we extract amounts even from other countries' SMS
+    final genericPatterns = [
+      RegExp(r'GHS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Ghana
+      RegExp(r'NGN\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Nigeria
+      RegExp(r'KES\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Kenya
+      RegExp(r'USD\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // USA
+      RegExp(r'INR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // India
+      RegExp(r'TZS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Tanzania
+      RegExp(r'UGX\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Uganda
+      RegExp(r'ZAR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // South Africa
+      RegExp(r'RWF\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Rwanda
+    ];
     
-    if (currencyMatch != null) {
-      return double.tryParse(currencyMatch.group(1) ?? '0') ?? 0.0;
+    for (final pattern in genericPatterns) {
+      final match = pattern.firstMatch(content);
+      if (match != null) {
+        return double.tryParse(match.group(1) ?? '0') ?? 0.0;
+      }
+    }
+    
+    // Look for other currency patterns based on country
+    switch (_selectedCountry) {
+      case 'Nigeria':
+        final ngnPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:naira|ngn)', caseSensitive: false);
+        final ngnMatch = ngnPattern.firstMatch(content);
+        if (ngnMatch != null) {
+          return double.tryParse(ngnMatch.group(1) ?? '0') ?? 0.0;
+        }
+        break;
+      case 'Kenya':
+        final kesPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:shilling|kes)', caseSensitive: false);
+        final kesMatch = kesPattern.firstMatch(content);
+        if (kesMatch != null) {
+          return double.tryParse(kesMatch.group(1) ?? '0') ?? 0.0;
+        }
+        break;
+      case 'India':
+        final inrPattern = RegExp(r'₹(\d+(?:\.\d{2})?)', caseSensitive: false);
+        final inrMatch = inrPattern.firstMatch(content);
+        if (inrMatch != null) {
+          return double.tryParse(inrMatch.group(1) ?? '0') ?? 0.0;
+        }
+        break;
+      case 'Ghana':
+        final ghsPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:cedis?|ghs)', caseSensitive: false);
+        final ghsMatch = ghsPattern.firstMatch(content);
+        if (ghsMatch != null) {
+          return double.tryParse(ghsMatch.group(1) ?? '0') ?? 0.0;
+        }
+        break;
     }
     
     return 0.0;
@@ -478,7 +798,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                         ActivityService.logActivity(
                           type: ActivityType.costSummaryViewed,
                           title: 'Viewed cost summary',
-                          description: 'Total: GHS ${_costSummary!.totalCost.toStringAsFixed(2)}',
+                          description: 'Total: ${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary!.totalCost.toStringAsFixed(2)}',
                           metadata: {
                             'totalCost': _costSummary!.totalCost,
                             'totalMessages': _costSummary!.totalMessages,
@@ -639,7 +959,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                                         ),
                                         const SizedBox(height: 8.0),
                                         Text(
-                                          'GHS ${_costSummary!.totalCost.toStringAsFixed(2)}',
+                                          '${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary!.totalCost.toStringAsFixed(2)}',
                                           style: theme.textTheme.titleLarge?.copyWith(
                                             color: Colors.red,
                                             fontWeight: FontWeight.bold,
@@ -687,7 +1007,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                                               ),
                                               const SizedBox(height: 8.0),
                                               Text(
-                                                'GHS ${_costSummary!.totalExpenses.toStringAsFixed(2)}',
+                                                '${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary!.totalExpenses.toStringAsFixed(2)}',
                                                 style: theme.textTheme.titleLarge?.copyWith(
                                                   color: Colors.orange,
                                                   fontWeight: FontWeight.bold,
@@ -733,7 +1053,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                                               ),
                                               const SizedBox(height: 8.0),
                                               Text(
-                                                'GHS ${_costSummary!.totalRevenue.toStringAsFixed(2)}',
+                                                '${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary!.totalRevenue.toStringAsFixed(2)}',
                                                 style: theme.textTheme.titleLarge?.copyWith(
                                                   color: Colors.green,
                                                   fontWeight: FontWeight.bold,
@@ -781,7 +1101,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                                         ),
                                         const SizedBox(height: 8.0),
                                         Text(
-                                          'GHS ${(_costSummary!.totalRevenue - _costSummary!.totalExpenses).toStringAsFixed(2)}',
+                                          '${_countryConfig?.currencySymbol ?? 'GHS'} ${(_costSummary!.totalRevenue - _costSummary!.totalExpenses).toStringAsFixed(2)}',
                                           style: theme.textTheme.titleLarge?.copyWith(
                                             color: (_costSummary!.totalRevenue - _costSummary!.totalExpenses) >= 0 
                                                 ? Colors.green 
@@ -1210,7 +1530,8 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   void _showMessageDetails(SMSMessage message) {
     final suggestions = SMSAnalyzer.generateSmartSuggestions(
       message.content, 
-      message.category
+      message.category,
+      country: _selectedCountry,
     );
     
     showDialog(
@@ -1228,7 +1549,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             Text(
-              'Cost: GHS ${message.cost.toStringAsFixed(2)}',
+              'Cost: ${_countryConfig?.currencySymbol ?? 'GHS'} ${message.cost.toStringAsFixed(2)}',
               style: Theme.of(context).textTheme.bodySmall,
             ),
             const SizedBox(height: 16.0),

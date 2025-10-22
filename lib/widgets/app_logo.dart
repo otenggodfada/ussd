@@ -19,105 +19,61 @@ class AppLogo extends StatelessWidget {
           width: size,
           height: size,
           decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [
-                Color(0xFF6366F1), // Indigo
-                Color(0xFF8B5CF6), // Purple
-              ],
-            ),
             borderRadius: BorderRadius.circular(size * 0.25),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF6366F1).withOpacity(0.4),
+                color: Colors.black.withOpacity(0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
             ],
           ),
-          child: Stack(
-            children: [
-              // Background decorative elements
-              Positioned(
-                right: -10,
-                top: -10,
-                child: Container(
-                  width: size * 0.4,
-                  height: size * 0.4,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              Positioned(
-                left: -5,
-                bottom: -5,
-                child: Container(
-                  width: size * 0.3,
-                  height: size * 0.3,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    shape: BoxShape.circle,
-                  ),
-                ),
-              ),
-              // Main content
-              Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.dialpad_rounded,
-                      color: Colors.white,
-                      size: size * 0.35,
-                    ),
-                    SizedBox(height: size * 0.02),
-                    Text(
-                      '*#',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: size * 0.22,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'monospace',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              // Plus badge
-              Positioned(
-                right: -2,
-                top: -2,
-                child: Container(
-                  width: size * 0.28,
-                  height: size * 0.28,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(size * 0.25),
+            child: Image.asset(
+              'assets/icons/logo.jpg',
+              width: size,
+              height: size,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                // Fallback to original design if image fails to load
+                return Container(
                   decoration: BoxDecoration(
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                       colors: [
-                        Color(0xFF10B981), // Green
-                        Color(0xFF3B82F6), // Blue
+                        Color(0xFF6366F1), // Indigo
+                        Color(0xFF8B5CF6), // Purple
                       ],
                     ),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: Colors.white,
-                      width: 2,
-                    ),
+                    borderRadius: BorderRadius.circular(size * 0.25),
                   ),
                   child: Center(
-                    child: Icon(
-                      Icons.add_rounded,
-                      color: Colors.white,
-                      size: size * 0.18,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.dialpad_rounded,
+                          color: Colors.white,
+                          size: size * 0.35,
+                        ),
+                        SizedBox(height: size * 0.02),
+                        Text(
+                          '*#',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: size * 0.22,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: 'monospace',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ),
-            ],
+                );
+              },
+            ),
           ),
         ),
         if (showText) ...[
