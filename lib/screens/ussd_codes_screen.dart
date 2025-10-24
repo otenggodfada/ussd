@@ -13,6 +13,7 @@ import 'package:ussd_plus/widgets/loading_dialog.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/utils/premium_features_service.dart';
 import 'package:ussd_plus/screens/settings_screen.dart';
+
 class USSDCodesScreen extends StatefulWidget {
   const USSDCodesScreen({super.key});
 
@@ -36,7 +37,8 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   }
 
   Future<void> _checkPremiumStatus() async {
-    final isActive = await PremiumFeaturesService.isFeatureActive(PremiumFeature.showAllCodesWeek);
+    final isActive = await PremiumFeaturesService.isFeatureActive(
+        PremiumFeature.showAllCodesWeek);
     setState(() {
       _isPremiumActive = isActive;
     });
@@ -46,9 +48,9 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     final sections = await USSDDataService.getOfflineUSSDData();
-    
+
     setState(() {
       _sections = sections;
       _isLoading = false;
@@ -67,13 +69,13 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
     setState(() {
       _isSearching = true;
     });
-    
+
     final results = await USSDDataService.searchUSSDCodes(query, _sections);
-    
+
     setState(() {
       _searchResults = results;
     });
-    
+
     // Log search activity
     if (results.isNotEmpty) {
       await ActivityService.logActivity(
@@ -88,7 +90,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
       appBar: AppBar(
@@ -158,7 +160,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Content
                 Expanded(
                   child: _isSearching
@@ -232,7 +234,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
       description: '${code.provider} - ${code.code}',
       metadata: {'code': code.code, 'provider': code.provider},
     );
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -256,12 +258,13 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Show consent dialog before showing rewarded ad
               final consent = await RewardedAdConsentDialog.show(
                 context: context,
                 title: 'Dial ${code.name}',
-                description: 'Watch a short advertisement to dial this USSD code and support the app.',
+                description:
+                    'Watch a short advertisement to dial this USSD code and support the app.',
               );
 
               if (consent == true) {
@@ -271,18 +274,20 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
                   AdMobService.showRewardedAd(
                     onRewarded: (reward) async {
                       // Reward coins for watching ad
-                      final newBalance = await CoinService.rewardForRewardedAd();
-                      
+                      final newBalance =
+                          await CoinService.rewardForRewardedAd();
+
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                            content: Text(
+                                'Earned 10 coins! New balance: $newBalance coins'),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 2),
                           ),
                         );
                       }
-                      
+
                       _performDial(code);
                     },
                   );
@@ -291,10 +296,10 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
                   if (context.mounted) {
                     LoadingDialog.show(context, 'Preparing...');
                   }
-                  
+
                   // Start loading rewarded ads
                   AdMobService.loadRewardedAd();
-                  
+
                   // Wait for up to 10 seconds for ads to load
                   bool adLoaded = false;
                   for (int i = 0; i < 10; i++) {
@@ -304,29 +309,31 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
                       break;
                     }
                   }
-                  
+
                   // Hide loading dialog
                   if (context.mounted) {
                     LoadingDialog.hide(context);
                   }
-                  
+
                   if (adLoaded && context.mounted) {
                     // Ad loaded within 10 seconds, show it
                     AdMobService.showRewardedAd(
                       onRewarded: (reward) async {
                         // Reward coins for watching ad
-                        final newBalance = await CoinService.rewardForRewardedAd();
-                        
+                        final newBalance =
+                            await CoinService.rewardForRewardedAd();
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                              content: Text(
+                                  'Earned 10 coins! New balance: $newBalance coins'),
                               backgroundColor: Colors.green,
                               duration: const Duration(seconds: 2),
                             ),
                           );
                         }
-                        
+
                         _performDial(code);
                       },
                     );
@@ -360,16 +367,16 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
     try {
       // Make the direct call
       bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
-      
+
       // Log copy/dial activity
       await ActivityService.logActivity(
         type: ActivityType.ussdCodeCopied,
         title: 'Dialed ${code.name}',
         description: code.code,
       );
-      
+
       if (!context.mounted) return;
-      
+
       if (result == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -389,7 +396,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
       }
     } catch (e) {
       if (!context.mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error: Unable to make call'),
@@ -403,16 +410,16 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
   Future<void> _toggleSearchFavorite(USSDCode code) async {
     // Toggle the favorite status
     final updatedCode = await USSDDataService.toggleFavorite(code);
-    
+
     if (!mounted) return;
-    
+
     // Update the search results list
     setState(() {
       final index = _searchResults.indexWhere((c) => c.id == code.id);
       if (index != -1) {
         _searchResults[index] = updatedCode;
       }
-      
+
       // Also update in sections if it exists
       for (var i = 0; i < _sections.length; i++) {
         final section = _sections[i];
@@ -423,23 +430,26 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
         }
       }
     });
-    
+
     // Clear cache so next load gets updated data
     USSDDataService.clearCache();
-    
+
     // Log favorite activity
     ActivityService.logActivity(
       type: ActivityType.ussdCodeFavorited,
-      title: updatedCode.isFavorite ? 'Added to favorites' : 'Removed from favorites',
+      title: updatedCode.isFavorite
+          ? 'Added to favorites'
+          : 'Removed from favorites',
       description: '${updatedCode.name} - ${updatedCode.provider}',
       metadata: {'code': updatedCode.code, 'provider': updatedCode.provider},
     );
-    
+
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
+        content: Text(
+            '${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -453,7 +463,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
       description: '${section.codes.length} USSD codes',
       metadata: {'category': section.name, 'codeCount': section.codes.length},
     );
-    
+
     // Group codes by provider first, then limit codes per provider if premium not active
     final Map<String, List<USSDCode>> allCodesByProvider = {};
     for (final code in section.codes) {
@@ -462,7 +472,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
       }
       allCodesByProvider[code.provider]!.add(code);
     }
-    
+
     // Limit codes per provider if premium not active
     final Map<String, List<USSDCode>> codesByProvider = {};
     if (_isPremiumActive) {
@@ -474,7 +484,7 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
         codesByProvider[provider] = providerCodes.take(4).toList();
       }
     }
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -542,7 +552,8 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
             children: [
               Row(
                 children: [
-                  Text(widget.section.icon, style: const TextStyle(fontSize: 20)),
+                  Text(widget.section.icon,
+                      style: const TextStyle(fontSize: 20)),
                   const SizedBox(width: 8),
                   Text(widget.section.name),
                 ],
@@ -575,7 +586,8 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                     Text(provider),
                     const SizedBox(width: 6),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
                         color: theme.colorScheme.primary.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(8),
@@ -605,16 +617,17 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                 children: [
                   // USSD Codes List
                   ...codes.map((code) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12.0),
-                    child: USSDCodeCard(
-                      code: code,
-                      onTap: () => _showCodeDetails(context, code),
-                      onFavorite: () => _toggleFavorite(context, code),
-                    ),
-                  )),
-                  
+                        padding: const EdgeInsets.only(bottom: 12.0),
+                        child: USSDCodeCard(
+                          code: code,
+                          onTap: () => _showCodeDetails(context, code),
+                          onFavorite: () => _toggleFavorite(context, code),
+                        ),
+                      )),
+
                   // Premium Banner (if not active and showing limited codes)
-                  if (!widget.isPremiumActive && widget.section.codes.length > 4)
+                  if (!widget.isPremiumActive &&
+                      widget.section.codes.length > 4)
                     Container(
                       margin: const EdgeInsets.only(top: 16.0),
                       padding: const EdgeInsets.all(16.0),
@@ -665,7 +678,8 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                           Text(
                             'Showing first 4 codes per provider. Unlock all ${widget.section.codes.length} codes with premium!',
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurface.withOpacity(0.8),
+                              color:
+                                  theme.colorScheme.onSurface.withOpacity(0.8),
                             ),
                           ),
                           const SizedBox(height: 12.0),
@@ -695,9 +709,10 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                         ],
                       ),
                     ),
-                  
+
                   // Hidden Codes Indicator (if not premium and there are more codes)
-                  if (!widget.isPremiumActive && widget.totalCodesCount > codes.length)
+                  if (!widget.isPremiumActive &&
+                      widget.totalCodesCount > codes.length)
                     Container(
                       margin: const EdgeInsets.only(top: 16.0),
                       padding: const EdgeInsets.all(16.0),
@@ -738,7 +753,8 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                                 Text(
                                   '${widget.totalCodesCount - codes.length} additional codes are hidden',
                                   style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.onSurface.withOpacity(0.7),
+                                    color: theme.colorScheme.onSurface
+                                        .withOpacity(0.7),
                                   ),
                                 ),
                               ],
@@ -772,7 +788,7 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
 
     // Show interstitial ad occasionally
     AdMobService.showInterstitialAdIfReady();
-    
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -796,12 +812,13 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Show consent dialog before showing rewarded ad
               final consent = await RewardedAdConsentDialog.show(
                 context: context,
                 title: 'Dial ${code.name}',
-                description: 'Watch a short advertisement to dial this USSD code and support the app.',
+                description:
+                    'Watch a short advertisement to dial this USSD code and support the app.',
               );
 
               if (consent == true) {
@@ -811,18 +828,20 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                   AdMobService.showRewardedAd(
                     onRewarded: (reward) async {
                       // Reward coins for watching ad
-                      final newBalance = await CoinService.rewardForRewardedAd();
-                      
+                      final newBalance =
+                          await CoinService.rewardForRewardedAd();
+
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                            content: Text(
+                                'Earned 10 coins! New balance: $newBalance coins'),
                             backgroundColor: Colors.green,
                             duration: const Duration(seconds: 2),
                           ),
                         );
                       }
-                      
+
                       _performDial(code);
                     },
                   );
@@ -831,10 +850,10 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                   if (context.mounted) {
                     LoadingDialog.show(context, 'Preparing...');
                   }
-                  
+
                   // Start loading rewarded ads
                   AdMobService.loadRewardedAd();
-                  
+
                   // Wait for up to 10 seconds for ads to load
                   bool adLoaded = false;
                   for (int i = 0; i < 10; i++) {
@@ -844,29 +863,31 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
                       break;
                     }
                   }
-                  
+
                   // Hide loading dialog
                   if (context.mounted) {
                     LoadingDialog.hide(context);
                   }
-                  
+
                   if (adLoaded && context.mounted) {
                     // Ad loaded within 10 seconds, show it
                     AdMobService.showRewardedAd(
                       onRewarded: (reward) async {
                         // Reward coins for watching ad
-                        final newBalance = await CoinService.rewardForRewardedAd();
-                        
+                        final newBalance =
+                            await CoinService.rewardForRewardedAd();
+
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                              content: Text(
+                                  'Earned 10 coins! New balance: $newBalance coins'),
                               backgroundColor: Colors.green,
                               duration: const Duration(seconds: 2),
                             ),
                           );
                         }
-                        
+
                         _performDial(code);
                       },
                     );
@@ -899,9 +920,9 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
   Future<void> _toggleFavorite(BuildContext context, USSDCode code) async {
     // Toggle the favorite status
     final updatedCode = await USSDDataService.toggleFavorite(code);
-    
+
     if (!mounted) return;
-    
+
     // Update the local state
     setState(() {
       // Find and update the code in the provider map
@@ -912,23 +933,26 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
         }
       });
     });
-    
+
     // Clear cache so next load gets updated data
     USSDDataService.clearCache();
-    
+
     // Log favorite activity
     ActivityService.logActivity(
       type: ActivityType.ussdCodeFavorited,
-      title: updatedCode.isFavorite ? 'Added to favorites' : 'Removed from favorites',
+      title: updatedCode.isFavorite
+          ? 'Added to favorites'
+          : 'Removed from favorites',
       description: '${updatedCode.name} - ${updatedCode.provider}',
       metadata: {'code': updatedCode.code, 'provider': updatedCode.provider},
     );
-    
+
     if (!mounted) return;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
+        content: Text(
+            '${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -938,16 +962,16 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
     try {
       // Make the direct call
       bool? result = await FlutterPhoneDirectCaller.callNumber(code.code);
-      
+
       // Log copy/dial activity
       await ActivityService.logActivity(
         type: ActivityType.ussdCodeCopied,
         title: 'Dialed ${code.name}',
         description: code.code,
       );
-      
+
       if (!context.mounted) return;
-      
+
       if (result == true) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -967,7 +991,7 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
       }
     } catch (e) {
       if (!context.mounted) return;
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Error: Unable to make call'),

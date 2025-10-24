@@ -5,7 +5,8 @@ import 'notification_service.dart';
 
 class ActivityService {
   static const String _activitiesKey = 'user_activities';
-  static const int _maxActivities = 50; // Keep only the most recent 50 activities
+  static const int _maxActivities =
+      50; // Keep only the most recent 50 activities
 
   static Future<void> logActivity({
     required ActivityType type,
@@ -156,4 +157,3 @@ class ActivityService {
     }
   }
 }
-

@@ -7,59 +7,59 @@ import 'package:http/http.dart' as http;
 class LocationService {
   static const String _autoDetectKey = 'auto_detect_country';
   static const String _detectedCountryKey = 'detected_country';
-  
+
   /// Check if auto-detection is enabled
   static Future<bool> isAutoDetectEnabled() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_autoDetectKey) ?? true; // Default to enabled
   }
-  
+
   /// Enable or disable auto-detection
   static Future<void> setAutoDetect(bool enabled) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_autoDetectKey, enabled);
   }
-  
+
   /// Get last detected country from cache
   static Future<String?> getDetectedCountry() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_detectedCountryKey);
   }
-  
+
   /// Save detected country to cache
   static Future<void> saveDetectedCountry(String country) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_detectedCountryKey, country);
   }
-  
+
   /// Check if location permission is granted
   static Future<bool> hasLocationPermission() async {
     final permission = await Geolocator.checkPermission();
-    return permission == LocationPermission.always || 
-           permission == LocationPermission.whileInUse;
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
-  
+
   /// Request location permission
   static Future<bool> requestLocationPermission() async {
     LocationPermission permission = await Geolocator.checkPermission();
-    
+
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
     }
-    
+
     if (permission == LocationPermission.deniedForever) {
       return false;
     }
-    
-    return permission == LocationPermission.always || 
-           permission == LocationPermission.whileInUse;
+
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
-  
+
   /// Detect user's country based on GPS location
   static Future<String?> detectCountryFromLocation() async {
     try {
       print('🌍 Starting country detection...');
-      
+
       // Check if auto-detect is enabled
       final autoDetect = await isAutoDetectEnabled();
       print('Auto-detect enabled: $autoDetect');
@@ -67,7 +67,7 @@ class LocationService {
         print('Auto-detect is disabled');
         return null;
       }
-      
+
       // Check location permission
       final hasPermission = await hasLocationPermission();
       print('Has location permission: $hasPermission');
@@ -80,7 +80,7 @@ class LocationService {
           return null;
         }
       }
-      
+
       // Check if location services are enabled
       final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       print('Location services enabled: $serviceEnabled');
@@ -88,11 +88,12 @@ class LocationService {
         print('❌ Location services are disabled');
         return null;
       }
-      
+
       print('Getting current position...');
       // Get current position with timeout
       final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.low, // Low accuracy is fine for country detection
+        desiredAccuracy:
+            LocationAccuracy.low, // Low accuracy is fine for country detection
         timeLimit: const Duration(seconds: 15),
       ).timeout(
         const Duration(seconds: 15),
@@ -101,9 +102,10 @@ class LocationService {
           throw Exception('Location timeout');
         },
       );
-      
-      print('📍 Position obtained: ${position.latitude}, ${position.longitude}');
-      
+
+      print(
+          '📍 Position obtained: ${position.latitude}, ${position.longitude}');
+
       // Get placemarks from coordinates
       print('Getting placemarks from coordinates...');
       final placemarks = await placemarkFromCoordinates(
@@ -116,32 +118,33 @@ class LocationService {
           throw Exception('Placemark timeout');
         },
       );
-      
+
       print('Found ${placemarks.length} placemarks');
-      
+
       if (placemarks.isEmpty) {
         print('❌ No placemarks found');
         return null;
       }
-      
+
       final placemark = placemarks.first;
       final countryCode = placemark.isoCountryCode;
       final countryName = placemark.country;
-      
+
       print('🏳️ Detected country: $countryName ($countryCode)');
       print('📍 Full placemark: ${placemark.toString()}');
-      
+
       // Map country code to our supported countries
-      final detectedCountry = _mapCountryCodeToSupportedCountry(countryCode, countryName);
+      final detectedCountry =
+          _mapCountryCodeToSupportedCountry(countryCode, countryName);
       print('🎯 Mapped to supported country: $detectedCountry');
-      
+
       if (detectedCountry != null) {
         await saveDetectedCountry(detectedCountry);
         print('✅ Country saved to cache');
       } else {
         print('❌ Country not supported: $countryName ($countryCode)');
       }
-      
+
       return detectedCountry;
     } catch (e) {
       print('❌ Error detecting country: $e');
@@ -152,11 +155,12 @@ class LocationService {
       return null;
     }
   }
-  
+
   /// Map ISO country code to supported countries
-  static String? _mapCountryCodeToSupportedCountry(String? countryCode, String? countryName) {
+  static String? _mapCountryCodeToSupportedCountry(
+      String? countryCode, String? countryName) {
     if (countryCode == null && countryName == null) return null;
-    
+
     // Try mapping by country code first
     if (countryCode != null) {
       switch (countryCode.toUpperCase()) {
@@ -180,7 +184,7 @@ class LocationService {
           return 'USA';
       }
     }
-    
+
     // Try mapping by country name as fallback
     if (countryName != null) {
       final name = countryName.toLowerCase();
@@ -192,34 +196,37 @@ class LocationService {
       if (name.contains('south africa')) return 'South Africa';
       if (name.contains('rwanda')) return 'Rwanda';
       if (name.contains('india')) return 'India';
-      if (name.contains('united states') || name.contains('america')) return 'USA';
+      if (name.contains('united states') || name.contains('america'))
+        return 'USA';
     }
-    
+
     return null; // Country not supported
   }
-  
+
   /// Detect country using IP geolocation as fallback
   static Future<String?> detectCountryFromIP() async {
     try {
       print('🌐 Trying IP geolocation fallback...');
-      
-      final response = await http.get(
+
+      final response = await http
+          .get(
         Uri.parse('http://ip-api.com/json'),
-      ).timeout(
+      )
+          .timeout(
         const Duration(seconds: 10),
         onTimeout: () {
           print('❌ IP geolocation timeout');
           throw Exception('IP geolocation timeout');
         },
       );
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final countryCode = data['countryCode'];
         final countryName = data['country'];
-        
+
         print('🌐 IP geolocation result: $countryName ($countryCode)');
-        
+
         return _mapCountryCodeToSupportedCountry(countryCode, countryName);
       } else {
         print('❌ IP geolocation failed with status: ${response.statusCode}');
@@ -238,21 +245,21 @@ class LocationService {
     if (!autoDetect) {
       return defaultCountry;
     }
-    
+
     // Try to get cached detected country first
     final cachedCountry = await getDetectedCountry();
     if (cachedCountry != null) {
       print('📱 Using cached country: $cachedCountry');
       return cachedCountry;
     }
-    
+
     // Try to detect country from GPS location first
     print('🛰️ Trying GPS location detection...');
     final detectedCountry = await detectCountryFromLocation();
     if (detectedCountry != null) {
       return detectedCountry;
     }
-    
+
     // Try IP geolocation as fallback
     print('🌐 Trying IP geolocation fallback...');
     final ipDetectedCountry = await detectCountryFromIP();
@@ -260,17 +267,17 @@ class LocationService {
       await saveDetectedCountry(ipDetectedCountry);
       return ipDetectedCountry;
     }
-    
+
     // Fall back to default
     print('⚠️ Using default country: $defaultCountry');
     return defaultCountry;
   }
-  
+
   /// Get list of supported country codes
   static List<String> getSupportedCountryCodes() {
     return ['GH', 'NG', 'KE', 'TZ', 'UG', 'ZA', 'RW', 'IN', 'US'];
   }
-  
+
   /// Get list of supported countries
   static List<String> getSupportedCountries() {
     return [
@@ -286,4 +293,3 @@ class LocationService {
     ];
   }
 }
-
