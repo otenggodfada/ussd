@@ -13,10 +13,7 @@ import 'package:ussd_plus/screens/notifications_screen.dart';
 class DashboardScreen extends StatefulWidget {
   final Function(int)? onNavigate;
 
-  const DashboardScreen({
-    super.key,
-    this.onNavigate,
-  });
+  const DashboardScreen({super.key, this.onNavigate});
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -42,8 +39,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
       // Get USSD codes count
       final sections = await USSDDataService.getOfflineUSSDData();
-      final codesCount =
-          sections.fold<int>(0, (sum, section) => sum + section.codes.length);
+      final codesCount = sections.fold<int>(
+        0,
+        (sum, section) => sum + section.codes.length,
+      );
 
       setState(() {
         _activityCount = activityCount;
@@ -76,7 +75,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'Sep',
       'Oct',
       'Nov',
-      'Dec'
+      'Dec',
     ];
     final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${days[now.weekday - 1]}, ${months[now.month - 1]} ${now.day}';
@@ -85,8 +84,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final gradient =
-        ThemeGenerator.generateGradient(ThemeGenerator.themeNumber);
+    final gradient = ThemeGenerator.generateGradient(
+      ThemeGenerator.themeNumber,
+    );
 
     return Scaffold(
       backgroundColor: const Color(0xFF1A1A1A),
@@ -101,9 +101,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               color: theme.colorScheme.surface.withOpacity(0.5),
               borderRadius: BorderRadius.circular(12.0),
             ),
-            child: const Center(
-              child: AppLogo(size: 32),
-            ),
+            child: const Center(child: AppLogo(size: 32)),
           ),
         ),
         title: Column(
@@ -174,7 +172,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.only(
-                    left: 16.0, right: 16.0, top: 16.0, bottom: 100.0),
+                  left: 16.0,
+                  right: 16.0,
+                  top: 16.0,
+                  bottom: 100.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -253,7 +255,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                         ),
                                         SizedBox(width: 4),
                                         Text(
-                                          'Offline Mode',
+                                          'USSD+',
                                           style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 11,
@@ -313,9 +315,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           color: theme.colorScheme.surface,
                           borderRadius: BorderRadius.circular(20.0),
                         ),
-                        child: const Center(
-                          child: CircularProgressIndicator(),
-                        ),
+                        child: const Center(child: CircularProgressIndicator()),
                       )
                     else
                       QuickStatsCard(
@@ -326,9 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(height: 24.0),
 
                     // Quick Actions
-                    QuickActionsCard(
-                      onNavigate: widget.onNavigate,
-                    ),
+                    QuickActionsCard(onNavigate: widget.onNavigate),
 
                     const SizedBox(height: 24.0),
 
@@ -350,10 +348,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
         borderRadius: BorderRadius.circular(8.0),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.2),
-          width: 1,
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
       ),
       child: Text(
         text,
