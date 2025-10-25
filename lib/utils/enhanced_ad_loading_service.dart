@@ -16,6 +16,14 @@ class EnhancedAdLoadingService {
   }) async {
     // Check if ad is already ready
     if (AdMobService.isRewardedAdReady) {
+      // Ad is ready, show it directly without loading dialog
+      _showRewardedAdDirectly(onRewarded);
+      return true;
+    }
+
+    // Check if we're on simulator - handle differently
+    if (AdMobService.isSimulator) {
+      // On simulator, show ad immediately without loading dialog
       _showRewardedAdDirectly(onRewarded);
       return true;
     }
@@ -25,7 +33,8 @@ class EnhancedAdLoadingService {
       LoadingDialog.showWithProgress(
         context,
         customLoadingMessage ?? 'Loading Advertisement',
-        subtitle: customSubtitle ?? 'Please wait while we prepare your reward...',
+        subtitle:
+            customSubtitle ?? 'Please wait while we prepare your reward...',
         progress: 0.0,
       );
     }
@@ -43,7 +52,8 @@ class EnhancedAdLoadingService {
         LoadingDialog.showWithProgress(
           context,
           state,
-          subtitle: customSubtitle ?? 'Please wait while we prepare your reward...',
+          subtitle:
+              customSubtitle ?? 'Please wait while we prepare your reward...',
           progress: currentProgress,
         );
       }
@@ -55,7 +65,8 @@ class EnhancedAdLoadingService {
         LoadingDialog.showWithProgress(
           context,
           currentLoadingState,
-          subtitle: customSubtitle ?? 'Please wait while we prepare your reward...',
+          subtitle:
+              customSubtitle ?? 'Please wait while we prepare your reward...',
           progress: progress,
         );
       }
@@ -69,22 +80,26 @@ class EnhancedAdLoadingService {
     final timeoutDuration = Duration(seconds: timeoutSeconds);
 
     while (!adLoaded && !timeoutReached) {
-      await Future.delayed(const Duration(milliseconds: _progressUpdateIntervalMs));
-      
+      await Future.delayed(
+        const Duration(milliseconds: _progressUpdateIntervalMs),
+      );
+
       final elapsed = DateTime.now().difference(startTime);
-      
+
       if (elapsed >= timeoutDuration) {
         timeoutReached = true;
         break;
       }
 
       // Update progress based on time elapsed
-      final timeProgress = elapsed.inMilliseconds / timeoutDuration.inMilliseconds;
+      final timeProgress =
+          elapsed.inMilliseconds / timeoutDuration.inMilliseconds;
       if (context.mounted && !timeoutReached) {
         LoadingDialog.showWithProgress(
           context,
           currentLoadingState,
-          subtitle: customSubtitle ?? 'Please wait while we prepare your reward...',
+          subtitle:
+              customSubtitle ?? 'Please wait while we prepare your reward...',
           progress: timeProgress,
         );
       }
@@ -128,9 +143,9 @@ class EnhancedAdLoadingService {
     final message = timeoutReached
         ? 'Advertisement loading timed out. Proceeding without ad...'
         : 'Advertisement unavailable. Proceeding without ad...';
-    
+
     final backgroundColor = timeoutReached ? Colors.orange : Colors.red;
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

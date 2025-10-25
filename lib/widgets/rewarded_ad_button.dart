@@ -38,7 +38,8 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
   }
 
   Future<void> _showRewardedAd() async {
-    if (!AdMobService.isRewardedAdReady) {
+    // Check if we're on simulator or if ad is ready
+    if (!AdMobService.isRewardedAdReady && !AdMobService.isSimulator) {
       _showErrorSnackBar('Ad not ready. Please try again in a moment.');
       return;
     }
@@ -50,7 +51,9 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
         onRewarded: (reward) {
           setState(() => _isLoading = false);
           widget.onRewardEarned();
-          _showSuccessSnackBar('Reward earned! ${reward.amount} ${reward.type}');
+          _showSuccessSnackBar(
+            'Reward earned! ${reward.amount} ${reward.type}',
+          );
         },
       );
     } catch (e) {
@@ -90,13 +93,16 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
         gradient: LinearGradient(
           colors: [
             widget.backgroundColor ?? theme.colorScheme.primary,
-            (widget.backgroundColor ?? theme.colorScheme.primary).withOpacity(0.8),
+            (widget.backgroundColor ?? theme.colorScheme.primary).withOpacity(
+              0.8,
+            ),
           ],
         ),
         borderRadius: BorderRadius.circular(16.0),
         boxShadow: [
           BoxShadow(
-            color: (widget.backgroundColor ?? theme.colorScheme.primary).withOpacity(0.3),
+            color: (widget.backgroundColor ?? theme.colorScheme.primary)
+                .withOpacity(0.3),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
@@ -141,7 +147,8 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                           Text(
                             widget.description,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: (widget.textColor ?? Colors.white).withOpacity(0.8),
+                              color: (widget.textColor ?? Colors.white)
+                                  .withOpacity(0.8),
                             ),
                           ),
                         ],
@@ -153,12 +160,18 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     else
                       Icon(
-                        isAdReady ? Icons.play_arrow_rounded : Icons.hourglass_empty_rounded,
+                        AdMobService.isSimulator
+                            ? Icons.developer_mode_rounded
+                            : (isAdReady
+                                  ? Icons.play_arrow_rounded
+                                  : Icons.hourglass_empty_rounded),
                         color: widget.textColor ?? Colors.white,
                         size: 24,
                       ),
@@ -166,7 +179,10 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                 ),
                 const SizedBox(height: 12.0),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 6.0,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20.0),
@@ -181,7 +197,11 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                       ),
                       const SizedBox(width: 4.0),
                       Text(
-                        isAdReady ? 'Watch Ad to Unlock' : 'Ad Loading...',
+                        AdMobService.isSimulator
+                            ? 'Simulator Mode'
+                            : (isAdReady
+                                  ? 'Watch Ad to Unlock'
+                                  : 'Ad Loading...'),
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: widget.textColor ?? Colors.white,
                           fontWeight: FontWeight.w600,

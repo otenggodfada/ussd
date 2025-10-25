@@ -30,9 +30,14 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
   }
 
   Future<void> _checkFeatureStatus() async {
-    final isActive = await PremiumFeaturesService.isFeatureActive(widget.feature);
-    final remainingTime = await PremiumFeaturesService.getFeatureRemainingTimeString(widget.feature);
-    
+    final isActive = await PremiumFeaturesService.isFeatureActive(
+      widget.feature,
+    );
+    final remainingTime =
+        await PremiumFeaturesService.getFeatureRemainingTimeString(
+          widget.feature,
+        );
+
     if (mounted) {
       setState(() {
         _isActive = isActive;
@@ -42,58 +47,16 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
   }
 
   Future<void> _activateFeature() async {
-    final featureInfo = PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
-    
+    final featureInfo =
+        PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
+
     setState(() => _isLoading = true);
 
-    // Show consent dialog for watching ads to earn coins
-    final consent = await RewardedAdConsentDialog.show(
-      context: context,
-      title: 'Earn Coins',
-      description: 'Watch a short advertisement to earn coins and unlock ${featureInfo['name']}.',
-    );
-
-    if (consent == true) {
-      // Show rewarded ad
-      if (AdMobService.isRewardedAdReady) {
-        AdMobService.showRewardedAd(
-          onRewarded: (reward) async {
-            await _processReward();
-          },
-        );
-      } else {
-        // No ad ready, show message
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Ad not ready. Please try again later.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        setState(() => _isLoading = false);
-      }
-    } else {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _processReward() async {
     try {
-      // Award coins for watching ad
-      final newBalance = await CoinService.rewardForRewardedAd();
-      
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Earned 10 coins! New balance: $newBalance coins'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
-      
-      // Get feature cost
+      // First, check current coin balance
+      final currentBalance = await CoinService.getCoinBalance();
+
+      // Get the cost for this feature
       int cost = 0;
       switch (widget.feature) {
         case PremiumFeature.removeAdsWeek:
@@ -115,20 +78,28 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
 
       if (mounted) {
         // Check if user has enough coins
-        if (newBalance >= cost) {
-          // Ask user if they want to spend coins to activate feature
-          final shouldActivate = await _showActivationDialog(cost, newBalance);
-          
+        if (currentBalance >= cost) {
+          // User has enough coins, ask if they want to spend coins to activate feature
+          final shouldActivate = await _showActivationDialog(
+            cost,
+            currentBalance,
+          );
+
           if (shouldActivate == true) {
             // Spend coins and activate feature
-            final success = await CoinService.spendCoins(cost, widget.feature.name);
-            
+            final success = await CoinService.spendCoins(
+              cost,
+              widget.feature.name,
+            );
+
             if (success) {
-              final featureInfo = PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
               final duration = featureInfo['duration'] as Duration;
-              
-              await PremiumFeaturesService.activateFeature(widget.feature, duration);
-              
+
+              await PremiumFeaturesService.activateFeature(
+                widget.feature,
+                duration,
+              );
+
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('${featureInfo['name']} activated!'),
@@ -136,24 +107,37 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
                   duration: const Duration(seconds: 3),
                 ),
               );
-              
+
               await _checkFeatureStatus();
               widget.onFeatureActivated?.call();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
-                  content: Text('Failed to activate feature. Please try again.'),
+                  content: Text(
+                    'Failed to activate feature. Please try again.',
+                  ),
                   backgroundColor: Colors.red,
                 ),
               );
             }
           }
         } else {
+          // Not enough coins - show message instead of video ad
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Not enough coins! You need $cost coins. Current: $newBalance coins. Watch more ads to earn coins!'),
+              content: Text(
+                'Not enough coins! You need $cost coins. Current: $currentBalance coins.',
+              ),
               backgroundColor: Colors.orange,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 4),
+              action: SnackBarAction(
+                label: 'Earn Coins',
+                textColor: Colors.white,
+                onPressed: () {
+                  // Navigate to coin earning section or show coin earning dialog
+                  _showCoinEarningOptions();
+                },
+              ),
             ),
           );
         }
@@ -161,10 +145,7 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error: $e'),
-            backgroundColor: Colors.red,
-          ),
+          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {
@@ -174,9 +155,74 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
     }
   }
 
+  Future<void> _showCoinEarningOptions() async {
+    // Show dialog with options to earn coins
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Earn Coins'),
+        content: const Text(
+          'You can earn coins by watching video advertisements. Would you like to watch an ad now?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop('cancel'),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop('watch_ad'),
+            child: const Text('Watch Ad'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == 'watch_ad') {
+      // Show consent dialog for watching ads to earn coins
+      final consent = await RewardedAdConsentDialog.show(
+        context: context,
+        title: 'Earn Coins',
+        description: 'Watch a short advertisement to earn 10 coins.',
+      );
+
+      if (consent == true) {
+        // Show rewarded ad
+        if (AdMobService.isRewardedAdReady) {
+          AdMobService.showRewardedAd(
+            onRewarded: (reward) async {
+              final newBalance = await CoinService.rewardForRewardedAd();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Earned 10 coins! New balance: $newBalance coins',
+                    ),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+          );
+        } else {
+          // No ad ready, show message
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Ad not ready. Please try again later.'),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        }
+      }
+    }
+  }
+
   Future<bool?> _showActivationDialog(int cost, int currentBalance) async {
-    final featureInfo = PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
-    
+    final featureInfo =
+        PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
+
     return showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -209,8 +255,9 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final featureInfo = PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
-    
+    final featureInfo =
+        PremiumFeaturesService.getFeatureInfo()[widget.feature]!;
+
     // Get feature cost
     int cost = 0;
     switch (widget.feature) {
@@ -233,7 +280,7 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
 
     return Container(
       decoration: BoxDecoration(
-        gradient: _isActive 
+        gradient: _isActive
             ? LinearGradient(
                 colors: [
                   Colors.green.withOpacity(0.2),
@@ -248,7 +295,7 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
               ),
         borderRadius: BorderRadius.circular(16.0),
         border: Border.all(
-          color: _isActive 
+          color: _isActive
               ? Colors.green.withOpacity(0.5)
               : theme.colorScheme.primary.withOpacity(0.3),
         ),
@@ -267,7 +314,7 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
                     Container(
                       padding: const EdgeInsets.all(12.0),
                       decoration: BoxDecoration(
-                        color: _isActive 
+                        color: _isActive
                             ? Colors.green.withOpacity(0.2)
                             : Colors.white.withOpacity(0.2),
                         borderRadius: BorderRadius.circular(12.0),
@@ -293,7 +340,8 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
                           Text(
                             featureInfo['description'] as String,
                             style: theme.textTheme.bodySmall?.copyWith(
-                              color: (_isActive ? Colors.green : Colors.white).withOpacity(0.8),
+                              color: (_isActive ? Colors.green : Colors.white)
+                                  .withOpacity(0.8),
                             ),
                           ),
                           if (_isActive) ...[
@@ -315,15 +363,13 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
                         height: 20,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
                         ),
                       )
                     else if (_isActive)
-                      Icon(
-                        Icons.check_circle,
-                        color: Colors.green,
-                        size: 24,
-                      )
+                      Icon(Icons.check_circle, color: Colors.green, size: 24)
                     else
                       Icon(
                         Icons.play_arrow_rounded,
@@ -334,9 +380,12 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
                 ),
                 const SizedBox(height: 12.0),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12.0,
+                    vertical: 6.0,
+                  ),
                   decoration: BoxDecoration(
-                    color: _isActive 
+                    color: _isActive
                         ? Colors.green.withOpacity(0.2)
                         : Colors.white.withOpacity(0.2),
                     borderRadius: BorderRadius.circular(20.0),

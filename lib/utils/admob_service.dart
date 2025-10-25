@@ -7,11 +7,11 @@ class AdMobService {
   static int _interstitialAdCounter = 0;
   static int _interstitialAdFrequency = 3; // Show interstitial every 3 actions
   static bool _isSimulator = false;
-  
+
   // Loading state callbacks
   static Function(String)? _onLoadingStateChanged;
   static Function(double)? _onLoadingProgress;
-  
+
   // Loading states
   static bool _isLoadingRewardedAd = false;
   static bool _isLoadingInterstitialAd = false;
@@ -52,15 +52,15 @@ class AdMobService {
   static void setLoadingStateCallback(Function(String) callback) {
     _onLoadingStateChanged = callback;
   }
-  
+
   static void setLoadingProgressCallback(Function(double) callback) {
     _onLoadingProgress = callback;
   }
-  
+
   static void _notifyLoadingState(String state) {
     _onLoadingStateChanged?.call(state);
   }
-  
+
   static void _notifyLoadingProgress(double progress) {
     _onLoadingProgress?.call(progress);
   }
@@ -74,7 +74,8 @@ class AdMobService {
 
       if (_isSimulator) {
         print(
-            '🚫 AdMob skipped for iOS Simulator (MarketplaceKit not available)');
+          '🚫 AdMob skipped for iOS Simulator (MarketplaceKit not available)',
+        );
         _isInitialized = true;
         return;
       }
@@ -204,6 +205,10 @@ class AdMobService {
   static void loadRewardedAd() {
     if (_isSimulator) {
       print('🚫 Rewarded ad loading skipped on simulator');
+      // On simulator, simulate ad ready state
+      _isLoadingRewardedAd = false;
+      _notifyLoadingState('Simulator mode - ad ready');
+      _notifyLoadingProgress(1.0);
       return;
     }
 
@@ -274,10 +279,12 @@ class AdMobService {
       },
     );
 
-    _rewardedAd!.show(onUserEarnedReward: (ad, reward) {
-      print('✅ User earned reward: ${reward.amount} ${reward.type}');
-      onRewarded({'amount': reward.amount, 'type': reward.type});
-    });
+    _rewardedAd!.show(
+      onUserEarnedReward: (ad, reward) {
+        print('✅ User earned reward: ${reward.amount} ${reward.type}');
+        onRewarded({'amount': reward.amount, 'type': reward.type});
+      },
+    );
   }
 
   // App Open Ad
@@ -351,9 +358,11 @@ class AdMobService {
 
   // Getters for loading states
   static bool get isInterstitialAdReady => _interstitialAd != null;
-  static bool get isRewardedAdReady => _rewardedAd != null;
+  static bool get isRewardedAdReady =>
+      _isSimulator ? true : (_rewardedAd != null);
   static bool get isAppOpenAdReady => _appOpenAd != null;
-  static bool get isLoadingRewardedAd => _isLoadingRewardedAd;
+  static bool get isLoadingRewardedAd =>
+      _isSimulator ? false : _isLoadingRewardedAd;
   static bool get isLoadingInterstitialAd => _isLoadingInterstitialAd;
   static bool get isLoadingAppOpenAd => _isLoadingAppOpenAd;
   static bool get isSimulator => _isSimulator;
