@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/utils/enhanced_ad_loading_service.dart';
 
 class RewardedAdButton extends StatefulWidget {
   final String title;
@@ -31,23 +31,16 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
   @override
   void initState() {
     super.initState();
-    // Preload rewarded ad if not already loaded
-    if (!AdMobService.isRewardedAdReady) {
-      AdMobService.loadRewardedAd();
-    }
+    // Preload rewarded ads in the background
+    EnhancedAdLoadingService.preloadRewardedAds();
   }
 
   Future<void> _showRewardedAd() async {
-    // Check if we're on simulator or if ad is ready
-    if (!AdMobService.isRewardedAdReady && !AdMobService.isSimulator) {
-      _showErrorSnackBar('Ad not ready. Please try again in a moment.');
-      return;
-    }
-
     setState(() => _isLoading = true);
 
     try {
-      AdMobService.showRewardedAd(
+      final adShown = await EnhancedAdLoadingService.showRewardedAdWithFeedback(
+        context: context,
         onRewarded: (reward) {
           setState(() => _isLoading = false);
           widget.onRewardEarned();
@@ -55,7 +48,14 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
             'Reward earned! ${reward.amount} ${reward.type}',
           );
         },
+        customLoadingMessage: 'Loading Advertisement',
+        customSubtitle: 'Please wait while we prepare your reward...',
       );
+
+      if (!adShown) {
+        setState(() => _isLoading = false);
+        _showErrorSnackBar('Failed to load advertisement. Please try again.');
+      }
     } catch (e) {
       setState(() => _isLoading = false);
       _showErrorSnackBar('Failed to show ad: $e');
@@ -85,7 +85,6 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isAdReady = AdMobService.isRewardedAdReady;
     final isLoading = _isLoading || widget.isLoading;
 
     return Container(
@@ -167,11 +166,7 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                       )
                     else
                       Icon(
-                        AdMobService.isSimulator
-                            ? Icons.developer_mode_rounded
-                            : (isAdReady
-                                  ? Icons.play_arrow_rounded
-                                  : Icons.hourglass_empty_rounded),
+                        Icons.play_arrow_rounded,
                         color: widget.textColor ?? Colors.white,
                         size: 24,
                       ),
@@ -197,11 +192,7 @@ class _RewardedAdButtonState extends State<RewardedAdButton> {
                       ),
                       const SizedBox(width: 4.0),
                       Text(
-                        AdMobService.isSimulator
-                            ? 'Simulator Mode'
-                            : (isAdReady
-                                  ? 'Watch Ad to Unlock'
-                                  : 'Ad Loading...'),
+                        'Watch Ad to Unlock',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: widget.textColor ?? Colors.white,
                           fontWeight: FontWeight.w600,

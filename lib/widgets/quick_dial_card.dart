@@ -5,9 +5,8 @@ import 'package:ussd_plus/utils/ussd_data_service.dart';
 import 'package:ussd_plus/utils/activity_service.dart';
 import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/theme/theme_generator.dart';
-import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/utils/enhanced_ad_loading_service.dart';
 import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
-import 'package:ussd_plus/widgets/loading_dialog.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 
 class QuickDialCard extends StatefulWidget {
@@ -101,77 +100,38 @@ class _QuickDialCardState extends State<QuickDialCard> {
     );
 
     if (consent == true) {
-      // User chose "Watch Ad"
-      if (AdMobService.isRewardedAdReady) {
-        // Ad is ready, show it
-        AdMobService.showRewardedAd(
-          onRewarded: (reward) async {
-            // Reward coins for watching ad
-            final newBalance = await CoinService.rewardForRewardedAd();
+      // User chose "Watch Ad" - use enhanced loading service
+      final adShown = await EnhancedAdLoadingService.showRewardedAdWithFeedback(
+        context: context,
+        onRewarded: (reward) async {
+          // Reward coins for watching ad
+          final newBalance = await CoinService.rewardForRewardedAd();
 
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content:
-                      Text('Earned 10 coins! New balance: $newBalance coins'),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 2),
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Earned 10 coins! New balance: $newBalance coins',
                 ),
-              );
-            }
-
-            _performDial(code);
-          },
-        );
-      } else {
-        // No ad ready, show loading animation and actively load ads
-        if (mounted) {
-          LoadingDialog.show(context, 'Preparing...');
-        }
-
-        // Start loading rewarded ads
-        AdMobService.loadRewardedAd();
-
-        // Wait for up to 10 seconds for ads to load
-        bool adLoaded = false;
-        for (int i = 0; i < 10; i++) {
-          await Future.delayed(const Duration(seconds: 1));
-          if (AdMobService.isRewardedAdReady) {
-            adLoaded = true;
-            break;
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+              ),
+            );
           }
-        }
 
-        // Hide loading dialog
-        if (mounted) {
-          LoadingDialog.hide(context);
-        }
-
-        if (adLoaded && mounted) {
-          // Ad loaded within 10 seconds, show it
-          AdMobService.showRewardedAd(
-            onRewarded: (reward) async {
-              // Reward coins for watching ad
-              final newBalance = await CoinService.rewardForRewardedAd();
-
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content:
-                        Text('Earned 10 coins! New balance: $newBalance coins'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-
-              _performDial(code);
-            },
-          );
-        } else {
-          // No ad loaded within 10 seconds, dial anyway
           _performDial(code);
-        }
+        },
+        customLoadingMessage: 'Preparing Advertisement',
+        customSubtitle: 'Please wait while we prepare your reward...',
+      );
+
+      if (!adShown && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to load advertisement. Please try again.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
       }
     } else if (consent == false) {
       // User chose "No", don't dial the code
@@ -244,9 +204,7 @@ class _QuickDialCardState extends State<QuickDialCard> {
           color: theme.colorScheme.surface,
           borderRadius: BorderRadius.circular(20.0),
         ),
-        child: const Center(
-          child: CircularProgressIndicator(),
-        ),
+        child: const Center(child: CircularProgressIndicator()),
       );
     }
 
@@ -267,7 +225,8 @@ class _QuickDialCardState extends State<QuickDialCard> {
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     gradient: ThemeGenerator.generateGradient(
-                        ThemeGenerator.themeNumber),
+                      ThemeGenerator.themeNumber,
+                    ),
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
@@ -444,8 +403,9 @@ class _QuickDialCardState extends State<QuickDialCard> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               decoration: BoxDecoration(
-                gradient:
-                    ThemeGenerator.generateGradient(ThemeGenerator.themeNumber),
+                gradient: ThemeGenerator.generateGradient(
+                  ThemeGenerator.themeNumber,
+                ),
                 borderRadius: BorderRadius.circular(8),
                 boxShadow: [
                   BoxShadow(
