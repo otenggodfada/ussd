@@ -1,44 +1,49 @@
 import 'package:flutter/material.dart';
+import 'package:ussd_plus/widgets/ad_loading_indicator.dart';
 
-class LoadingDialog extends StatelessWidget {
+class LoadingDialog extends StatefulWidget {
   final String message;
+  final String? subtitle;
+  final bool showProgress;
+  final double? progress;
 
   const LoadingDialog({
     super.key,
     required this.message,
+    this.subtitle,
+    this.showProgress = false,
+    this.progress,
   });
 
   @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16.0),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16.0),
-            Text(
-              message,
-              style: theme.textTheme.bodyMedium,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+  State<LoadingDialog> createState() => _LoadingDialogState();
+
+  static void show(BuildContext context, String message, {String? subtitle}) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => LoadingDialog(
+        message: message,
+        subtitle: subtitle,
       ),
     );
   }
 
-  static void show(BuildContext context, String message) {
+  static void showWithProgress(
+    BuildContext context,
+    String message, {
+    String? subtitle,
+    double? progress,
+  }) {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => LoadingDialog(message: message),
+      builder: (context) => LoadingDialog(
+        message: message,
+        subtitle: subtitle,
+        showProgress: true,
+        progress: progress,
+      ),
     );
   }
 
@@ -46,3 +51,20 @@ class LoadingDialog extends StatelessWidget {
     Navigator.of(context).pop();
   }
 }
+
+class _LoadingDialogState extends State<LoadingDialog> {
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      child: AdLoadingIndicator(
+        message: widget.message,
+        subtitle: widget.subtitle,
+        progress: widget.progress,
+        showProgress: widget.showProgress,
+      ),
+    );
+  }
+}
+

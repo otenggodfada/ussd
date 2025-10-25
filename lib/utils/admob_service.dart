@@ -7,6 +7,15 @@ class AdMobService {
   static int _interstitialAdCounter = 0;
   static int _interstitialAdFrequency = 3; // Show interstitial every 3 actions
   static bool _isSimulator = false;
+  
+  // Loading state callbacks
+  static Function(String)? _onLoadingStateChanged;
+  static Function(double)? _onLoadingProgress;
+  
+  // Loading states
+  static bool _isLoadingRewardedAd = false;
+  static bool _isLoadingInterstitialAd = false;
+  static bool _isLoadingAppOpenAd = false;
 
   // Ad Unit IDs (Replace with your actual IDs)
   // Android Ad Unit IDs
@@ -38,6 +47,23 @@ class AdMobService {
       Platform.isIOS ? _iosRewardedAdUnitId : _androidRewardedAdUnitId;
   static String get _appOpenAdUnitId =>
       Platform.isIOS ? _iosAppOpenAdUnitId : _androidAppOpenAdUnitId;
+
+  // Callback methods for loading state management
+  static void setLoadingStateCallback(Function(String) callback) {
+    _onLoadingStateChanged = callback;
+  }
+  
+  static void setLoadingProgressCallback(Function(double) callback) {
+    _onLoadingProgress = callback;
+  }
+  
+  static void _notifyLoadingState(String state) {
+    _onLoadingStateChanged?.call(state);
+  }
+  
+  static void _notifyLoadingProgress(double progress) {
+    _onLoadingProgress?.call(progress);
+  }
 
   static Future<void> initialize() async {
     if (_isInitialized) return;
@@ -181,17 +207,31 @@ class AdMobService {
       return;
     }
 
+    if (_isLoadingRewardedAd) {
+      print('⏳ Rewarded ad already loading, skipping duplicate request');
+      return;
+    }
+
+    _isLoadingRewardedAd = true;
+    _notifyLoadingState('Loading advertisement...');
+    _notifyLoadingProgress(0.1);
+
     RewardedAd.load(
       adUnitId: _rewardedAdUnitId,
       request: const AdRequest(),
       rewardedAdLoadCallback: RewardedAdLoadCallback(
         onAdLoaded: (ad) {
           _rewardedAd = ad;
+          _isLoadingRewardedAd = false;
+          _notifyLoadingProgress(1.0);
+          _notifyLoadingState('Advertisement ready!');
           print('✅ Rewarded ad loaded');
         },
         onAdFailedToLoad: (error) {
-          print('❌ Rewarded ad failed to load: $error');
           _rewardedAd = null;
+          _isLoadingRewardedAd = false;
+          _notifyLoadingState('Failed to load advertisement');
+          print('❌ Rewarded ad failed to load: $error');
         },
       ),
     );
@@ -207,13 +247,17 @@ class AdMobService {
 
     if (_rewardedAd == null) {
       print('❌ No rewarded ad available to show');
+      _notifyLoadingState('No advertisement available');
       loadRewardedAd(); // Load a new ad for next time
       return;
     }
 
+    _notifyLoadingState('Preparing advertisement...');
+
     _rewardedAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdShowedFullScreenContent: (ad) {
         print('✅ Rewarded ad showed full screen content');
+        _notifyLoadingState('Advertisement playing...');
       },
       onAdDismissedFullScreenContent: (ad) {
         print('✅ Rewarded ad dismissed');
@@ -225,6 +269,7 @@ class AdMobService {
         print('❌ Rewarded ad failed to show: $error');
         ad.dispose();
         _rewardedAd = null;
+        _notifyLoadingState('Failed to show advertisement');
         loadRewardedAd(); // Load a new ad for next time
       },
     );
@@ -304,9 +349,13 @@ class AdMobService {
     _appOpenAd = null;
   }
 
+  // Getters for loading states
   static bool get isInterstitialAdReady => _interstitialAd != null;
   static bool get isRewardedAdReady => _rewardedAd != null;
   static bool get isAppOpenAdReady => _appOpenAd != null;
+  static bool get isLoadingRewardedAd => _isLoadingRewardedAd;
+  static bool get isLoadingInterstitialAd => _isLoadingInterstitialAd;
+  static bool get isLoadingAppOpenAd => _isLoadingAppOpenAd;
   static bool get isSimulator => _isSimulator;
 
   // Navigation ad settings

@@ -198,30 +198,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       child: Stack(
                         children: [
                           // Background decorative elements
-                          Positioned(
-                            right: -20,
-                            top: -20,
-                            child: Container(
-                              width: 100,
-                              height: 100,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            right: 30,
-                            bottom: -10,
-                            child: Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.08),
-                                shape: BoxShape.circle,
-                              ),
-                            ),
-                          ),
+                       
+                       
                           // Content
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.start,

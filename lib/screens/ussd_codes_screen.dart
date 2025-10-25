@@ -7,6 +7,7 @@ import 'package:ussd_plus/models/activity_model.dart';
 import 'package:ussd_plus/widgets/ussd_section_card.dart';
 import 'package:ussd_plus/widgets/ussd_code_card.dart';
 import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/utils/enhanced_ad_loading_service.dart';
 import 'package:ussd_plus/screens/favorites_screen.dart';
 import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
 import 'package:ussd_plus/widgets/loading_dialog.dart';
@@ -268,79 +269,34 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
               );
 
               if (consent == true) {
-                // User chose "Watch Ad"
-                if (AdMobService.isRewardedAdReady) {
-                  // Ad is ready, show it
-                  AdMobService.showRewardedAd(
-                    onRewarded: (reward) async {
-                      // Reward coins for watching ad
-                      final newBalance =
-                          await CoinService.rewardForRewardedAd();
+                // User chose "Watch Ad" - use enhanced ad loading service
+                final adShown = await EnhancedAdLoadingService.showRewardedAdWithFeedback(
+                  context: context,
+                  onRewarded: (reward) async {
+                    // Reward coins for watching ad
+                    final newBalance = await CoinService.rewardForRewardedAd();
 
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Earned 10 coins! New balance: $newBalance coins'),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-
-                      _performDial(code);
-                    },
-                  );
-                } else {
-                  // No ad ready, show loading animation and actively load ads
-                  if (context.mounted) {
-                    LoadingDialog.show(context, 'Preparing...');
-                  }
-
-                  // Start loading rewarded ads
-                  AdMobService.loadRewardedAd();
-
-                  // Wait for up to 10 seconds for ads to load
-                  bool adLoaded = false;
-                  for (int i = 0; i < 10; i++) {
-                    await Future.delayed(const Duration(seconds: 1));
-                    if (AdMobService.isRewardedAdReady) {
-                      adLoaded = true;
-                      break;
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Earned 10 coins! New balance: $newBalance coins'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     }
-                  }
 
-                  // Hide loading dialog
-                  if (context.mounted) {
-                    LoadingDialog.hide(context);
-                  }
-
-                  if (adLoaded && context.mounted) {
-                    // Ad loaded within 10 seconds, show it
-                    AdMobService.showRewardedAd(
-                      onRewarded: (reward) async {
-                        // Reward coins for watching ad
-                        final newBalance =
-                            await CoinService.rewardForRewardedAd();
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Earned 10 coins! New balance: $newBalance coins'),
-                              backgroundColor: Colors.green,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-
-                        _performDial(code);
-                      },
-                    );
-                  } else {
-                    // No ad loaded within 10 seconds, dial anyway
                     _performDial(code);
-                  }
+                  },
+                  timeoutSeconds: 15,
+                  customLoadingMessage: 'Loading Advertisement',
+                  customSubtitle: 'Please wait while we prepare your reward...',
+                );
+
+                // If ad wasn't shown, dial anyway
+                if (!adShown) {
+                  _performDial(code);
                 }
               } else if (consent == false) {
                 // User chose "No", don't dial the code
@@ -822,79 +778,34 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
               );
 
               if (consent == true) {
-                // User chose "Watch Ad"
-                if (AdMobService.isRewardedAdReady) {
-                  // Ad is ready, show it
-                  AdMobService.showRewardedAd(
-                    onRewarded: (reward) async {
-                      // Reward coins for watching ad
-                      final newBalance =
-                          await CoinService.rewardForRewardedAd();
+                // User chose "Watch Ad" - use enhanced ad loading service
+                final adShown = await EnhancedAdLoadingService.showRewardedAdWithFeedback(
+                  context: context,
+                  onRewarded: (reward) async {
+                    // Reward coins for watching ad
+                    final newBalance = await CoinService.rewardForRewardedAd();
 
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text(
-                                'Earned 10 coins! New balance: $newBalance coins'),
-                            backgroundColor: Colors.green,
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      }
-
-                      _performDial(code);
-                    },
-                  );
-                } else {
-                  // No ad ready, show loading animation and actively load ads
-                  if (context.mounted) {
-                    LoadingDialog.show(context, 'Preparing...');
-                  }
-
-                  // Start loading rewarded ads
-                  AdMobService.loadRewardedAd();
-
-                  // Wait for up to 10 seconds for ads to load
-                  bool adLoaded = false;
-                  for (int i = 0; i < 10; i++) {
-                    await Future.delayed(const Duration(seconds: 1));
-                    if (AdMobService.isRewardedAdReady) {
-                      adLoaded = true;
-                      break;
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                              'Earned 10 coins! New balance: $newBalance coins'),
+                          backgroundColor: Colors.green,
+                          duration: const Duration(seconds: 2),
+                        ),
+                      );
                     }
-                  }
 
-                  // Hide loading dialog
-                  if (context.mounted) {
-                    LoadingDialog.hide(context);
-                  }
-
-                  if (adLoaded && context.mounted) {
-                    // Ad loaded within 10 seconds, show it
-                    AdMobService.showRewardedAd(
-                      onRewarded: (reward) async {
-                        // Reward coins for watching ad
-                        final newBalance =
-                            await CoinService.rewardForRewardedAd();
-
-                        if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                  'Earned 10 coins! New balance: $newBalance coins'),
-                              backgroundColor: Colors.green,
-                              duration: const Duration(seconds: 2),
-                            ),
-                          );
-                        }
-
-                        _performDial(code);
-                      },
-                    );
-                  } else {
-                    // No ad loaded within 10 seconds, dial anyway
                     _performDial(code);
-                  }
+                  },
+                  timeoutSeconds: 15,
+                  customLoadingMessage: 'Loading Advertisement',
+                  customSubtitle: 'Please wait while we prepare your reward...',
+                );
+
+                // If ad wasn't shown, dial anyway
+                if (!adShown) {
+                  _performDial(code);
                 }
               } else if (consent == false) {
                 // User chose "No", don't dial the code

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:ussd_plus/utils/admob_service.dart';
+import 'package:ussd_plus/utils/enhanced_ad_loading_service.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
 
@@ -30,75 +30,41 @@ class _CoinEarningButtonState extends State<CoinEarningButton> {
       );
 
       if (consent == true) {
-        // Show rewarded ad
-        if (AdMobService.isRewardedAdReady) {
-          AdMobService.showRewardedAd(
-            onRewarded: (reward) async {
-              // Reward coins for watching ad
-              final newBalance = await CoinService.rewardForRewardedAd();
-              
-              if (mounted) {
-                setState(() => _isLoading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Earned 10 coins! New balance: $newBalance coins'),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              }
-              
-              widget.onCoinsEarned?.call();
-            },
-          );
-        } else {
-          // No ad ready, show loading animation and wait for ads to load
-          if (mounted) {
-            // Keep loading state while waiting for ads
-            // Wait for up to 10 seconds for ads to load
-            bool adLoaded = false;
-            for (int i = 0; i < 10; i++) {
-              await Future.delayed(const Duration(seconds: 1));
-              if (AdMobService.isRewardedAdReady) {
-                adLoaded = true;
-                break;
-              }
+        // Use enhanced ad loading service
+        final adShown = await EnhancedAdLoadingService.showRewardedAdWithFeedback(
+          context: context,
+          onRewarded: (reward) async {
+            // Reward coins for watching ad
+            final newBalance = await CoinService.rewardForRewardedAd();
+            
+            if (mounted) {
+              setState(() => _isLoading = false);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Earned 10 coins! New balance: $newBalance coins'),
+                  backgroundColor: Colors.green,
+                  duration: const Duration(seconds: 3),
+                ),
+              );
             }
             
-            if (adLoaded && mounted) {
-              // Ad loaded, show it
-              AdMobService.showRewardedAd(
-                onRewarded: (reward) async {
-                  // Reward coins for watching ad
-                  final newBalance = await CoinService.rewardForRewardedAd();
-                  
-                  if (mounted) {
-                    setState(() => _isLoading = false);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Earned 10 coins! New balance: $newBalance coins'),
-                        backgroundColor: Colors.green,
-                        duration: const Duration(seconds: 3),
-                      ),
-                    );
-                  }
-                  
-                  widget.onCoinsEarned?.call();
-                },
-              );
-            } else {
-              // No ad loaded within 10 seconds
-              if (mounted) {
-                setState(() => _isLoading = false);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Ad not ready. Please try again later.'),
-                    backgroundColor: Colors.orange,
-                  ),
-                );
-              }
-            }
-          }
+            widget.onCoinsEarned?.call();
+          },
+          timeoutSeconds: 15,
+          customLoadingMessage: 'Loading Advertisement',
+          customSubtitle: 'Please wait while we prepare your reward...',
+        );
+
+        // If ad wasn't shown, show fallback message
+        if (!adShown && mounted) {
+          setState(() => _isLoading = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Advertisement unavailable. Please try again later.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
       } else {
         // User declined, stop loading
