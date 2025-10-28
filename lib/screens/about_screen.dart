@@ -1,9 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:ussd_plus/widgets/app_logo.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
-class AboutScreen extends StatelessWidget {
+class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
+
+  @override
+  State<AboutScreen> createState() => _AboutScreenState();
+}
+
+class _AboutScreenState extends State<AboutScreen> {
+  String version = '1.0.0';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVersion();
+  }
+
+  Future<void> _loadVersion() async {
+    final packageInfo = await PackageInfo.fromPlatform();
+    setState(() {
+      version = packageInfo.version;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +57,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 8.0),
             
             Text(
-              'Version 1.0.0',
+              'Version $version',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: Colors.grey[600],
               ),
@@ -59,8 +80,7 @@ class AboutScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 12.0),
                     const Text(
-                      'USSD+ is a powerful offline-first app that combines USSD code management with AI-powered SMS analysis. '
-                      'Everything works completely offline, ensuring your data stays private and secure on your device.',
+                      'USSD+ is a powerful app that combines USSD code management with AI-powered SMS analysis.',
                       style: TextStyle(height: 1.5),
                     ),
                   ],
@@ -84,11 +104,9 @@ class AboutScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12.0),
-                    _buildFeatureItem('📱', 'Offline USSD Codes', 'Access telecom, banking, and utility USSD codes'),
+                    _buildFeatureItem('📱', 'USSD Codes & SMS Analysis', 'Access telecom, banking, and utility USSD codes'),
                     _buildFeatureItem('🤖', 'AI SMS Analysis', 'Smart categorization and cost analysis'),
                     _buildFeatureItem('💰', 'Cost Tracking', 'Monitor SMS spending by category'),
-                    _buildFeatureItem('🔒', '100% Offline', 'No internet required, complete privacy'),
-                    _buildFeatureItem('🎨', 'Dynamic Themes', 'Multiple visual themes and layouts'),
                   ],
                 ),
               ),
@@ -113,7 +131,7 @@ class AboutScreen extends StatelessWidget {
                     _buildInfoRow('Platform', 'Flutter 3+'),
                     _buildInfoRow('Storage', 'Hive Local Database'),
                     _buildInfoRow('Permissions', 'SMS, Notifications'),
-                    _buildInfoRow('Offline', '100% Offline Operation'),
+               
                     _buildInfoRow('Compliance', 'Play Store & App Store Ready'),
                   ],
                 ),
@@ -136,10 +154,8 @@ class AboutScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12.0),
-                    _buildInfoRow('Developer', 'USSD+ Team'),
-                    _buildInfoRow('Email', 'contact@ussdplus.app'),
-                    _buildInfoRow('Website', 'www.ussdplus.app'),
-                    _buildInfoRow('Support', 'support@ussdplus.app'),
+                    _buildInfoRow('Developer', 'Redizeuz'),
+                    
                   ],
                 ),
               ),
@@ -149,7 +165,7 @@ class AboutScreen extends StatelessWidget {
             
             // Copyright
             Text(
-              '© 2024 USSD+ Team. All rights reserved.',
+              '© ${DateTime.now().year} USSD+ Team. All rights reserved.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
               ),
@@ -159,7 +175,7 @@ class AboutScreen extends StatelessWidget {
             const SizedBox(height: 8.0),
             
             Text(
-              'Made with ❤️ for offline-first mobile users',
+              'Made with ❤️ by Redizeuz',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: Colors.grey[600],
               ),

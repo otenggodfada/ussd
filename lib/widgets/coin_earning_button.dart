@@ -38,12 +38,19 @@ class _CoinEarningButtonState extends State<CoinEarningButton> {
             final newBalance = await CoinService.rewardForRewardedAd();
             
             if (mounted) {
-              setState(() => _isLoading = false);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Earned 10 coins! New balance: $newBalance coins'),
                   backgroundColor: Colors.green,
                   duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'Dismiss',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
+                  ),
                 ),
               );
             }
@@ -55,16 +62,9 @@ class _CoinEarningButtonState extends State<CoinEarningButton> {
           customSubtitle: 'Please wait while we prepare your reward...',
         );
 
-        // If ad wasn't shown, show fallback message
-        if (!adShown && mounted) {
+        // Ensure loading state is reset regardless of ad result
+        if (mounted) {
           setState(() => _isLoading = false);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Advertisement unavailable. Please try again later.'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
         }
       } else {
         // User declined, stop loading
@@ -79,6 +79,14 @@ class _CoinEarningButtonState extends State<CoinEarningButton> {
           SnackBar(
             content: Text('Error: $e'),
             backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
           ),
         );
       }

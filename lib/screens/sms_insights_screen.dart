@@ -95,18 +95,22 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
         }
     } catch (e) {
       setState(() {
-        _messages = _generateSampleMessages(); // This already uses selected country
+        _messages = []; // Don't use sample data
         _costSummary = _calculateCostSummary(_messages);
         _isLoading = false;
       });
       
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Could not read SMS: $e'),
-            backgroundColor: Colors.orange,
-          ),
-        );
+      if (mounted && _messages.isEmpty) {
+        // Only show error if we expected to get data but got none
+        if (Platform.isAndroid) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not read SMS. Please grant SMS permission in settings.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
       }
     }
   }
@@ -117,6 +121,12 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     try {
       final List<dynamic> smsData = await platform.invokeMethod('getSMS');
       
+      // If we got an empty list, return empty list (don't use sample data)
+      if (smsData.isEmpty) {
+        print('No SMS messages found on device');
+        return [];
+      }
+      
       return smsData.map((sms) {
         final Map<String, dynamic> smsMap = Map<String, dynamic>.from(sms);
         
@@ -124,7 +134,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
         final content = smsMap['body'] ?? '';
         final sender = smsMap['address'] ?? '';
         final timestamp = DateTime.fromMillisecondsSinceEpoch(
-          int.parse(smsMap['date'] ?? '0')
+          int.parse(smsMap['date']?.toString() ?? '0')
         );
         
         final category = SMSAnalyzer.categorizeMessage(content, country: _selectedCountry);
@@ -132,7 +142,7 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
         final cost = SMSAnalyzer.calculateCost(content, provider, country: _selectedCountry);
         
         return SMSMessage(
-          id: smsMap['_id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          id: smsMap['_id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
           sender: sender,
           content: content,
           timestamp: timestamp,
@@ -141,9 +151,18 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
           provider: provider,
         );
       }).toList();
+    } on PlatformException catch (e) {
+      print('Platform error reading SMS: ${e.message}');
+      // If permission denied, return empty list so user can be prompted
+      if (e.code == 'PERMISSION_DENIED') {
+        return [];
+      }
+      // For other errors, also return empty list
+      return [];
     } catch (e) {
       print('Error reading SMS: $e');
-      return _generateSampleMessages();
+      // Don't use sample data - return empty list
+      return [];
     }
   }
 
@@ -177,30 +196,32 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     // Convert common currency patterns to selected country's currency
     String convertedContent = content;
     
-    // Convert GHS to target currency
-    convertedContent = convertedContent.replaceAll(RegExp(r'GHS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    // Helper function to replace currency codes with target currency and clean commas
+    String replaceCurrency(RegExp pattern) {
+      return convertedContent.replaceAllMapped(pattern, (match) {
+        final amount = match.group(1)?.replaceAll(',', '').replaceAll(' ', '') ?? '';
+        return '$targetCurrency $amount'; // Space between currency and amount
+      });
+    }
     
-    // Convert NGN to target currency
-    convertedContent = convertedContent.replaceAll(RegExp(r'NGN\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    // Convert all currency codes to target currency
+    final currencies = [
+      r'GHS\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'NGN\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'KES\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'USD\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'INR\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'TZS\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'UGX\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'ZAR\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'RWF\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',
+      r'\$\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', // Dollar sign
+      r'₹\s*([0-9,\s]+(?:\.[0-9]{1,2})?)',   // Rupee symbol
+    ];
     
-    // Convert KES to target currency
-    convertedContent = convertedContent.replaceAll(RegExp(r'KES\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    
-    // Convert USD to target currency
-    convertedContent = convertedContent.replaceAll(RegExp(r'USD\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    
-    // Convert INR to target currency
-    convertedContent = convertedContent.replaceAll(RegExp(r'INR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    
-    // Convert other currencies
-    convertedContent = convertedContent.replaceAll(RegExp(r'TZS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    convertedContent = convertedContent.replaceAll(RegExp(r'UGX\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    convertedContent = convertedContent.replaceAll(RegExp(r'ZAR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    convertedContent = convertedContent.replaceAll(RegExp(r'RWF\s*(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    
-    // Convert currency symbols
-    convertedContent = convertedContent.replaceAll(RegExp(r'\$(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
-    convertedContent = convertedContent.replaceAll(RegExp(r'₹(\d+(?:\.\d{2})?)', caseSensitive: false), '$targetCurrency \$1');
+    for (final currencyPattern in currencies) {
+      convertedContent = replaceCurrency(RegExp(currencyPattern, caseSensitive: false));
+    }
     
     return convertedContent;
   }
@@ -503,65 +524,98 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
   }
 
   double _extractAmountFromMessage(String content) {
-    // Look for currency symbol amounts in the message (like $, ₹)
-    final symbolPattern = RegExp(r'\$(\d+(?:\.\d{2})?)', caseSensitive: false);
+    // Helper function to parse amount string and remove commas
+    double? parseAmount(String? amountStr) {
+      if (amountStr == null) return null;
+      // Remove commas from numbers (e.g., "1,500.00" -> "1500.00")
+      final cleanedAmount = amountStr.replaceAll(',', '').replaceAll(' ', '');
+      return double.tryParse(cleanedAmount);
+    }
+    
+    // Try to match currency patterns more flexibly
+    // Pattern: CURRENCY_CODE (optional spaces) NUMBER (optional decimals)
+    // Examples: "GHS 1,500.00", "NGN 5000", "KES1,000.50"
+    
+    // Look for currency symbol amounts in the message (like $, ₹) - handle commas
+    final symbolPattern = RegExp(r'\$([0-9,\s]+(?:\.[0-9]{2})?)', caseSensitive: false);
     final symbolMatch = symbolPattern.firstMatch(content);
     
     if (symbolMatch != null) {
-      return double.tryParse(symbolMatch.group(1) ?? '0') ?? 0.0;
+      return parseAmount(symbolMatch.group(1)) ?? 0.0;
     }
     
     // Look for generic currency patterns and convert to selected country's currency
     // This ensures we extract amounts even from other countries' SMS
+    // Updated to handle comma-separated numbers and flexible spacing
     final genericPatterns = [
-      RegExp(r'GHS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Ghana
-      RegExp(r'NGN\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Nigeria
-      RegExp(r'KES\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Kenya
-      RegExp(r'USD\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // USA
-      RegExp(r'INR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // India
-      RegExp(r'TZS\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Tanzania
-      RegExp(r'UGX\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Uganda
-      RegExp(r'ZAR\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // South Africa
-      RegExp(r'RWF\s*(\d+(?:\.\d{2})?)', caseSensitive: false), // Rwanda
+      RegExp(r'GHS\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Ghana
+      RegExp(r'NGN\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Nigeria
+      RegExp(r'KES\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Kenya
+      RegExp(r'USD\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // USA
+      RegExp(r'INR\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // India
+      RegExp(r'TZS\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Tanzania
+      RegExp(r'UGX\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Uganda
+      RegExp(r'ZAR\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // South Africa
+      RegExp(r'RWF\s*:?\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false), // Rwanda
     ];
     
     for (final pattern in genericPatterns) {
       final match = pattern.firstMatch(content);
       if (match != null) {
-        return double.tryParse(match.group(1) ?? '0') ?? 0.0;
+        return parseAmount(match.group(1)) ?? 0.0;
       }
     }
     
-    // Look for other currency patterns based on country
+    // Look for other currency patterns based on country - handle commas and flexible spacing
     switch (_selectedCountry) {
       case 'Nigeria':
-        final ngnPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:naira|ngn)', caseSensitive: false);
+        final ngnPattern = RegExp(r'([0-9,\s]+(?:\.[0-9]{1,2})?)\s*(?:naira|ngn)', caseSensitive: false);
         final ngnMatch = ngnPattern.firstMatch(content);
         if (ngnMatch != null) {
-          return double.tryParse(ngnMatch.group(1) ?? '0') ?? 0.0;
+          return parseAmount(ngnMatch.group(1)) ?? 0.0;
         }
         break;
       case 'Kenya':
-        final kesPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:shilling|kes)', caseSensitive: false);
+        final kesPattern = RegExp(r'([0-9,\s]+(?:\.[0-9]{1,2})?)\s*(?:shilling|kes)', caseSensitive: false);
         final kesMatch = kesPattern.firstMatch(content);
         if (kesMatch != null) {
-          return double.tryParse(kesMatch.group(1) ?? '0') ?? 0.0;
+          return parseAmount(kesMatch.group(1)) ?? 0.0;
         }
         break;
       case 'India':
-        final inrPattern = RegExp(r'₹(\d+(?:\.\d{2})?)', caseSensitive: false);
+        final inrPattern = RegExp(r'₹\s*([0-9,\s]+(?:\.[0-9]{1,2})?)', caseSensitive: false);
         final inrMatch = inrPattern.firstMatch(content);
         if (inrMatch != null) {
-          return double.tryParse(inrMatch.group(1) ?? '0') ?? 0.0;
+          return parseAmount(inrMatch.group(1)) ?? 0.0;
         }
         break;
       case 'Ghana':
-        final ghsPattern = RegExp(r'(\d+(?:\.\d{2})?)\s*(?:cedis?|ghs)', caseSensitive: false);
+        final ghsPattern = RegExp(r'([0-9,\s]+(?:\.[0-9]{1,2})?)\s*(?:cedis?|ghs)', caseSensitive: false);
         final ghsMatch = ghsPattern.firstMatch(content);
         if (ghsMatch != null) {
-          return double.tryParse(ghsMatch.group(1) ?? '0') ?? 0.0;
+          return parseAmount(ghsMatch.group(1)) ?? 0.0;
         }
         break;
+    }
+    
+    // If no currency code found, try to extract amounts near transaction keywords
+    // Look for patterns like "debited 5,000.00", "credited 10,000", "paid 1000"
+    final transactionKeywords = [
+      'debited', 'credited', 'withdrawn', 'deposited', 'paid', 'received',
+      'charged', 'deducted', 'transferred', 'sent', 'payment', 'purchase',
+      'balance', 'amount', 'total'
+    ];
+    
+    for (final keyword in transactionKeywords) {
+      // Pattern: keyword (optional spaces) NUMBER
+      final pattern = RegExp('$keyword\\s*:?\\s*([0-9,\\s]+(?:\\.[0-9]{1,2})?)', caseSensitive: false);
+      final match = pattern.firstMatch(content);
+      if (match != null) {
+        final amount = parseAmount(match.group(1));
+        if (amount != null && amount > 0) {
+          return amount;
+        }
+      }
     }
     
     return 0.0;
@@ -605,7 +659,9 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     final expenseKeywords = [
       'debited', 'withdrawn', 'spent', 'paid', 'charged', 'deducted',
       'purchase', 'payment', 'bill', 'fee', 'cost', 'expense',
-      'sent to', 'transfer to', 'withdrawal', 'buy', 'bought', 'cash out'
+      'sent to', 'transfer to', 'withdrawal', 'buy', 'bought', 'cash out',
+      'sent', 'outgoing', 'debit', 'disbursement', 'outflow',
+      'transaction', 'paid out', 'settlement'
     ];
     
     return expenseKeywords.any((keyword) => content.contains(keyword));
@@ -633,7 +689,9 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
     final revenueKeywords = [
       'credited', 'received', 'deposited', 'refund', 'cashback',
       'bonus', 'reward', 'earned', 'income', 'salary', 'wage',
-      'deposit', 'credit', 'return'
+      'deposit', 'credit', 'return', 'incoming', 'receipt',
+      'collection', 'settlement received', 'payment received',
+      'transfer received', 'credited to', 'credited with'
     ];
     
     return revenueKeywords.any((keyword) => content.contains(keyword));
@@ -926,51 +984,6 @@ class _SMSInsightsScreenState extends State<SMSInsightsScreen> {
                               // Stats Grid
                               Column(
                                 children: [
-                                  // Total Cost - Full Row
-                                  Container(
-                                    width: double.infinity,
-                                    padding: const EdgeInsets.all(16.0),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(16.0),
-                                      border: Border.all(
-                                        color: Colors.red.withOpacity(0.2),
-                                      ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Icon(
-                                              Icons.attach_money_rounded,
-                                              color: Colors.red,
-                                              size: 20,
-                                            ),
-                                            const SizedBox(width: 8.0),
-                                            Text(
-                                              'Total Cost',
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                color: Colors.red,
-                                                fontWeight: FontWeight.w600,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 8.0),
-                                        Text(
-                                          '${_countryConfig?.currencySymbol ?? 'GHS'} ${_costSummary!.totalCost.toStringAsFixed(2)}',
-                                          style: theme.textTheme.titleLarge?.copyWith(
-                                            color: Colors.red,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  
-                                  const SizedBox(height: 12.0),
-                                  
                                   // Expenses and Revenue - Row
                                   Row(
                                     children: [

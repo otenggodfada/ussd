@@ -10,10 +10,11 @@ import 'package:ussd_plus/utils/admob_service.dart';
 import 'package:ussd_plus/utils/enhanced_ad_loading_service.dart';
 import 'package:ussd_plus/screens/favorites_screen.dart';
 import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
-import 'package:ussd_plus/widgets/loading_dialog.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/utils/premium_features_service.dart';
 import 'package:ussd_plus/screens/settings_screen.dart';
+import 'package:ussd_plus/utils/app_review_service.dart';
+import 'package:ussd_plus/widgets/rate_us_dialog.dart';
 
 class USSDCodesScreen extends StatefulWidget {
   const USSDCodesScreen({super.key});
@@ -331,6 +332,9 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
         description: code.code,
       );
 
+      // Track user action for rating prompts
+      await AppReviewService.recordAction('ussd_code_dialed', metadata: code.code);
+
       if (!context.mounted) return;
 
       if (result == true) {
@@ -341,6 +345,9 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Show rating dialog after successful actions
+        _maybeShowRatingDialog();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -453,6 +460,25 @@ class _USSDCodesScreenState extends State<USSDCodesScreen> {
         ),
       ),
     );
+  }
+
+  // Helper method to maybe show rating dialog
+  Future<void> _maybeShowRatingDialog() async {
+    try {
+      // Only show on certain actions (e.g., every 10th action)
+      final stats = await AppReviewService.getStats();
+      final actionCount = stats['actionCount'] as int;
+      
+      // Show rating dialog every 10 successful dials
+      if (actionCount > 0 && actionCount % 10 == 0) {
+        await Future.delayed(const Duration(seconds: 2)); // Delay for better UX
+        if (mounted) {
+          await RateUsDialog.show(context);
+        }
+      }
+    } catch (e) {
+      print('Error showing rating dialog: $e');
+    }
   }
 
   @override
@@ -860,13 +886,32 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
 
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-            '${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
-        duration: const Duration(seconds: 2),
-      ),
-    );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+              '${updatedCode.name} ${updatedCode.isFavorite ? 'added to' : 'removed from'} favorites'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+
+  // Helper method to maybe show rating dialog
+  Future<void> _maybeShowRatingDialog() async {
+    try {
+      // Only show on certain actions (e.g., every 10th action)
+      final stats = await AppReviewService.getStats();
+      final actionCount = stats['actionCount'] as int;
+      
+      // Show rating dialog every 10 successful dials
+      if (actionCount > 0 && actionCount % 10 == 0) {
+        await Future.delayed(const Duration(seconds: 2)); // Delay for better UX
+        if (mounted) {
+          await RateUsDialog.show(context);
+        }
+      }
+    } catch (e) {
+      print('Error showing rating dialog: $e');
+    }
   }
 
   Future<void> _performDial(USSDCode code) async {
@@ -881,6 +926,9 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
         description: code.code,
       );
 
+      // Track user action for rating prompts
+      await AppReviewService.recordAction('ussd_code_dialed', metadata: code.code);
+
       if (!context.mounted) return;
 
       if (result == true) {
@@ -891,6 +939,9 @@ class _SectionDetailsScreenState extends State<_SectionDetailsScreen> {
             backgroundColor: Colors.green,
           ),
         );
+        
+        // Show rating dialog after successful actions
+        _maybeShowRatingDialog();
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

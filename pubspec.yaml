@@ -1,7 +1,7 @@
 name: ussd_plus
 description: Offline USSD and AI-powered SMS analysis app
 publish_to: 'none'
-version: 1.0.0+5
+version: 1.0.0+6
 
 environment:
     sdk: ^3.9.0
@@ -27,6 +27,8 @@ dependencies:
   package_info_plus: ^8.0.0
   http: ^1.1.0
   connectivity_plus: ^6.1.0
+  in_app_review: ^2.0.9
+  url_launcher: ^6.2.4
 
 dev_dependencies:
   flutter_test:

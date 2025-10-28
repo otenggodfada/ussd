@@ -9,6 +9,7 @@ import 'package:ussd_plus/widgets/coin_premium_feature_card.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/utils/premium_features_service.dart';
 import 'package:ussd_plus/widgets/coin_earning_button.dart';
+import 'package:ussd_plus/widgets/rate_us_dialog.dart';
 
 class SettingsScreen extends StatefulWidget {
   final bool scrollToCoins;
@@ -189,6 +190,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             subtitle: 'Get help and contact support',
             onTap: () => _showHelpSupport(context),
           ),
+          
+          const SizedBox(height: 8.0),
+          
+          // Rate Us Button
+          const RateUsButton(),
           
           const SizedBox(height: 24.0),
           

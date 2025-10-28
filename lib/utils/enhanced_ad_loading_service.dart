@@ -40,36 +40,16 @@ class EnhancedAdLoadingService {
     }
 
     // Set up loading state callbacks
-    String currentLoadingState = 'Initializing...';
-    double currentProgress = 0.0;
     bool adLoaded = false;
     bool timeoutReached = false;
 
-    // Set up callbacks
+    // Set up callbacks (no longer used, but kept for compatibility)
     AdMobService.setLoadingStateCallback((state) {
-      currentLoadingState = state;
-      if (context.mounted && !timeoutReached) {
-        LoadingDialog.showWithProgress(
-          context,
-          state,
-          subtitle:
-              customSubtitle ?? 'Please wait while we prepare your reward...',
-          progress: currentProgress,
-        );
-      }
+      // Loading state tracking removed - dialog is shown statically
     });
 
     AdMobService.setLoadingProgressCallback((progress) {
-      currentProgress = progress;
-      if (context.mounted && !timeoutReached) {
-        LoadingDialog.showWithProgress(
-          context,
-          currentLoadingState,
-          subtitle:
-              customSubtitle ?? 'Please wait while we prepare your reward...',
-          progress: progress,
-        );
-      }
+      // Progress tracking removed - dialog is shown statically
     });
 
     // Start loading rewarded ads
@@ -91,18 +71,16 @@ class EnhancedAdLoadingService {
         break;
       }
 
-      // Update progress based on time elapsed
-      final timeProgress =
-          elapsed.inMilliseconds / timeoutDuration.inMilliseconds;
-      if (context.mounted && !timeoutReached) {
-        LoadingDialog.showWithProgress(
-          context,
-          currentLoadingState,
-          subtitle:
-              customSubtitle ?? 'Please wait while we prepare your reward...',
-          progress: timeProgress,
-        );
+      // Check if loading has failed
+      if (!AdMobService.isLoadingRewardedAd && 
+          !AdMobService.isRewardedAdReady && 
+          AdMobService.hasFailedToLoadRewardedAd) {
+        // Ad loading failed, exit loop
+        timeoutReached = true;
+        break;
       }
+
+      // Note: Loading dialog was already shown, no need to update it
 
       // Check if ad is ready
       if (AdMobService.isRewardedAdReady) {
@@ -146,17 +124,22 @@ class EnhancedAdLoadingService {
 
     final backgroundColor = timeoutReached ? Colors.orange : Colors.red;
 
+    // Clear any existing snackbars first
+    ScaffoldMessenger.of(context).clearSnackBars();
+    
+    // Show the new snackbar
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: backgroundColor,
         duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
         action: SnackBarAction(
-          label: 'Retry',
+          label: 'Dismiss',
           textColor: Colors.white,
           onPressed: () {
-            // Retry loading ads
-            AdMobService.loadRewardedAd();
+            ScaffoldMessenger.of(context).hideCurrentSnackBar();
           },
         ),
       ),

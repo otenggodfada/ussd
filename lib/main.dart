@@ -14,6 +14,7 @@ import 'package:ussd_plus/utils/admob_service.dart';
 import 'package:ussd_plus/utils/location_service.dart';
 import 'package:ussd_plus/utils/onboarding_service.dart';
 import 'package:ussd_plus/utils/notification_service.dart';
+import 'package:ussd_plus/utils/app_review_service.dart';
 import 'package:timezone/data/latest.dart' as tz;
 
 void main() async {
@@ -47,6 +48,9 @@ void main() async {
 
   // Initialize Notifications
   await NotificationService.initialize();
+
+  // Initialize App Review Service
+  await AppReviewService.initialize();
 
   runApp(const USSDPlusApp());
 }

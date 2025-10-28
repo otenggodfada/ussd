@@ -16,6 +16,7 @@ class AdMobService {
   static bool _isLoadingRewardedAd = false;
   static bool _isLoadingInterstitialAd = false;
   static bool _isLoadingAppOpenAd = false;
+  static bool _hasFailedToLoadRewardedAd = false;
 
   // Ad Unit IDs (Replace with your actual IDs)
   // Android Ad Unit IDs
@@ -24,7 +25,7 @@ class AdMobService {
   static const String _androidInterstitialAdUnitId =
       'ca-app-pub-8528924538237596/3201256325';
   static const String _androidRewardedAdUnitId =
-      'ca-app-pub-8528924538237596/1888174651';
+     'ca-app-pub-8528924538237596/1888174651';
   static const String _androidAppOpenAdUnitId =
       'ca-app-pub-8528924538237596/1278441198';
 
@@ -201,14 +202,17 @@ class AdMobService {
   }
 
   static RewardedAd? _rewardedAd;
+  static bool _isPreloadingAd = false;
 
-  static void loadRewardedAd() {
+  static void loadRewardedAd({bool silent = false}) {
     if (_isSimulator) {
       print('🚫 Rewarded ad loading skipped on simulator');
       // On simulator, simulate ad ready state
       _isLoadingRewardedAd = false;
-      _notifyLoadingState('Simulator mode - ad ready');
-      _notifyLoadingProgress(1.0);
+      if (!silent) {
+        _notifyLoadingState('Simulator mode - ad ready');
+        _notifyLoadingProgress(1.0);
+      }
       return;
     }
 
@@ -218,8 +222,13 @@ class AdMobService {
     }
 
     _isLoadingRewardedAd = true;
-    _notifyLoadingState('Loading advertisement...');
-    _notifyLoadingProgress(0.1);
+    _isPreloadingAd = silent;
+    _hasFailedToLoadRewardedAd = false;
+    
+    if (!silent) {
+      _notifyLoadingState('Loading advertisement...');
+      _notifyLoadingProgress(0.1);
+    }
 
     RewardedAd.load(
       adUnitId: _rewardedAdUnitId,
@@ -228,14 +237,22 @@ class AdMobService {
         onAdLoaded: (ad) {
           _rewardedAd = ad;
           _isLoadingRewardedAd = false;
-          _notifyLoadingProgress(1.0);
-          _notifyLoadingState('Advertisement ready!');
+          _isPreloadingAd = false;
+          _hasFailedToLoadRewardedAd = false;
+          if (!silent) {
+            _notifyLoadingProgress(1.0);
+            _notifyLoadingState('Advertisement ready!');
+          }
           print('✅ Rewarded ad loaded');
         },
         onAdFailedToLoad: (error) {
           _rewardedAd = null;
           _isLoadingRewardedAd = false;
-          _notifyLoadingState('Failed to load advertisement');
+          _isPreloadingAd = false;
+          _hasFailedToLoadRewardedAd = true;
+          if (!silent) {
+            _notifyLoadingState('Failed to load advertisement');
+          }
           print('❌ Rewarded ad failed to load: $error');
         },
       ),
@@ -253,7 +270,7 @@ class AdMobService {
     if (_rewardedAd == null) {
       print('❌ No rewarded ad available to show');
       _notifyLoadingState('No advertisement available');
-      loadRewardedAd(); // Load a new ad for next time
+      loadRewardedAd(silent: true); // Load a new ad for next time silently
       return;
     }
 
@@ -268,14 +285,14 @@ class AdMobService {
         print('✅ Rewarded ad dismissed');
         ad.dispose();
         _rewardedAd = null;
-        loadRewardedAd(); // Load a new ad for next time
+        loadRewardedAd(silent: true); // Load a new ad for next time silently
       },
       onAdFailedToShowFullScreenContent: (ad, error) {
         print('❌ Rewarded ad failed to show: $error');
         ad.dispose();
         _rewardedAd = null;
         _notifyLoadingState('Failed to show advertisement');
-        loadRewardedAd(); // Load a new ad for next time
+        loadRewardedAd(silent: true); // Load a new ad for next time silently
       },
     );
 
@@ -365,6 +382,7 @@ class AdMobService {
       _isSimulator ? false : _isLoadingRewardedAd;
   static bool get isLoadingInterstitialAd => _isLoadingInterstitialAd;
   static bool get isLoadingAppOpenAd => _isLoadingAppOpenAd;
+  static bool get hasFailedToLoadRewardedAd => _hasFailedToLoadRewardedAd;
   static bool get isSimulator => _isSimulator;
 
   // Navigation ad settings

@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:ussd_plus/utils/coin_service.dart';
 import 'package:ussd_plus/utils/premium_features_service.dart';
-import 'package:ussd_plus/widgets/rewarded_ad_consent_dialog.dart';
-import 'package:ussd_plus/utils/admob_service.dart';
 
 class CoinPremiumFeatureCard extends StatefulWidget {
   final PremiumFeature feature;
@@ -112,11 +110,19 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
               widget.onFeatureActivated?.call();
             } else {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text(
+                SnackBar(
+                  content: const Text(
                     'Failed to activate feature. Please try again.',
                   ),
                   backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  action: SnackBarAction(
+                    label: 'Dismiss',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    },
+                  ),
                 ),
               );
             }
@@ -130,12 +136,12 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
               ),
               backgroundColor: Colors.orange,
               duration: const Duration(seconds: 4),
+              behavior: SnackBarBehavior.floating,
               action: SnackBarAction(
-                label: 'Earn Coins',
+                label: 'Dismiss',
                 textColor: Colors.white,
                 onPressed: () {
-                  // Navigate to coin earning section or show coin earning dialog
-                  _showCoinEarningOptions();
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 },
               ),
             ),
@@ -145,76 +151,23 @@ class _CoinPremiumFeatureCardState extends State<CoinPremiumFeatureCard> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text('Error: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Dismiss',
+              textColor: Colors.white,
+              onPressed: () {
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              },
+            ),
+          ),
         );
       }
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  Future<void> _showCoinEarningOptions() async {
-    // Show dialog with options to earn coins
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Earn Coins'),
-        content: const Text(
-          'You can earn coins by watching video advertisements. Would you like to watch an ad now?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop('cancel'),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(context).pop('watch_ad'),
-            child: const Text('Watch Ad'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == 'watch_ad') {
-      // Show consent dialog for watching ads to earn coins
-      final consent = await RewardedAdConsentDialog.show(
-        context: context,
-        title: 'Earn Coins',
-        description: 'Watch a short advertisement to earn 10 coins.',
-      );
-
-      if (consent == true) {
-        // Show rewarded ad
-        if (AdMobService.isRewardedAdReady) {
-          AdMobService.showRewardedAd(
-            onRewarded: (reward) async {
-              final newBalance = await CoinService.rewardForRewardedAd();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      'Earned 10 coins! New balance: $newBalance coins',
-                    ),
-                    backgroundColor: Colors.green,
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              }
-            },
-          );
-        } else {
-          // No ad ready, show message
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ad not ready. Please try again later.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
-        }
       }
     }
   }
